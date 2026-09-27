@@ -34,7 +34,7 @@ dutch-auction/
 ├── backend/             Fastify 5 + SQLite indexer/read API (optional)
 │                        event sync ≤ 15 s, GET /api/auctions…
 ├── scripts/             seed-demo.sh, sync-deployments.mjs
-├── deployments/         { chainId, nft, factory } manifests
+├── deployments/         { chainId, nft, factory, startBlock } manifests
 └── specs/               Spec Kit artifacts (spec, plan, tasks, quickstart, checklists)
 ```
 
@@ -62,7 +62,7 @@ gallery reads.
 ## Quickstart
 
 ```bash
-git clone <repo-url> && cd dutch-auction
+git clone https://github.com/MohammedSoliman10/dutch-auction.git && cd dutch-auction
 npm install                       # workspaces: frontend + backend
 forge build                       # contract artifacts (codegen + backend read out/)
 cp .env.example .env              # fill RPC_URL (+ DEPLOYER_KEY for deploy/seed)
@@ -162,17 +162,27 @@ Errors follow `specs/001-dutch-auction-web-app/contracts/api.md`
 
 ## Deploying the web app to Vercel
 
-1. Push the repository to GitHub.
-2. Vercel → *New Project* → import the repo, **root = repository root**:
-   - Build command: `npm run build --workspace frontend`
-   - Output directory: `frontend/dist`
-   - Framework preset: Vite (override if it rewrites the command)
-3. Add the `VITE_FACTORY_ADDRESS`, `VITE_NFT_ADDRESS` (and optionally
-   `VITE_RPC_URL`, `VITE_WALLETCONNECT_PROJECT_ID`) env vars — the same values
-   printed by `scripts/sync-deployments.mjs`.
-4. Deploy. The gallery degrades gracefully to on-chain discovery until/unless a
-   backend is hosted separately (Fastify + SQLite needs a persistent host —
-   Railway, Fly, a VPS — not Vercel serverless).
+The repo ships [`vercel.json`](vercel.json): root install (`npm ci`, Node ≥ 24
+via `engines`), build `npm run build --workspace frontend`, output
+`frontend/dist`, SPA rewrite so `/auction/:address` deep links resolve. The
+`dutch-auction` project is created, linked (`.vercel/`, gitignored) and its
+env vars are set for **production + preview**.
+
+```bash
+git push                          # sync main to GitHub
+npx vercel deploy --prod --yes    # builds on Vercel and prints the public URL
+```
+
+Fresh project / new env value:
+
+```bash
+npx vercel project add <name> && npx vercel link --project <name> --yes
+npx vercel env add VITE_FACTORY_ADDRESS production --value <addr> --force
+```
+
+The gallery degrades gracefully to on-chain discovery (FR-020) until a backend
+is hosted separately — Fastify + SQLite needs a persistent host (Railway, Fly,
+a VPS), not Vercel serverless.
 
 ## Testing & quality gates
 
