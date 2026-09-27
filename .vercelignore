@@ -1,0 +1,11 @@
+# Files never uploaded to Vercel's build (gitignore-like patterns).
+# Local secrets and state must not leave the machine.
+.env*
+!.env.example
+backend/data/
+broadcast/
+coverage/
+node_modules/
+.git/
+.specify/
+.idea/
