@@ -158,10 +158,10 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 - [X] T058 [US3] Implement `backend/src/indexer.ts`: poll `AuctionCreated` from factory, register auction rows, then poll known auction addresses for `AuctionSold`/`AuctionCancelled`/`AuctionReclaimed`; ≤ 15 s visibility cadence; idempotent upserts + cursor (green T056)
 - [X] T059 [US3] Implement `backend/src/metadata.ts`: bounded `tokenURI` fetch (http/https/ipfs only, 5 s timeout, 100 KB cap, R13) caching `metadata_name`/`metadata_image`; failures leave nulls (never wedge the indexer)
 - [X] T060 [US3] Implement read-time `status` + `currentPrice` computation in `backend/src/routes/auctions.ts` per data-model §1.2 (client still re-derives per second — R7); null `buyer`/`salePrice` unless sold
-- [ ] T061 [P] [US3] Implement `frontend/src/hooks/useAuctions.ts` (gallery query, ~15 s refresh) and `frontend/src/hooks/useAuction.ts` (detail with API → direct on-chain fallback chain for FR-020)
-- [ ] T062 [US3] Implement `frontend/src/pages/GalleryPage.tsx`: auction cards with preview, current price, time remaining; status filter; cursor paging; reach any live auction in ≤ 3 interactions (SC-009)
-- [ ] T063 [US3] Implement empty states (no auctions / no live / no filter match — friendly copy naming why + next step) and degraded view with retry when API unavailable (FR-014, FR-020, US3.4, Edge Cases)
-- [ ] T064 [US3] Implement `frontend/src/components/auction/AuctionCard.tsx` + outcome rendering per FR-015: "sold at price P to buyer B" or "expired/cancelled" with seller named (US3.2); metadata placeholder fallback (edge); reuse `hooks/useMetadata.ts` / `lib/ipfs.ts` including FR-019 safe-link rules (explicit action, new tab, `rel="noopener noreferrer"`, no auto-execution)
+- [X] T061 [P] [US3] Implement `frontend/src/hooks/useAuctions.ts` (gallery query, ~15 s refresh) and `frontend/src/hooks/useAuction.ts` (detail with API → direct on-chain fallback chain for FR-020)
+- [X] T062 [US3] Implement `frontend/src/pages/GalleryPage.tsx`: auction cards with preview, current price, time remaining; status filter; cursor paging; reach any live auction in ≤ 3 interactions (SC-009)
+- [X] T063 [US3] Implement empty states (no auctions / no live / no filter match — friendly copy naming why + next step) and degraded view with retry when API unavailable (FR-014, FR-020, US3.4, Edge Cases)
+- [X] T064 [US3] Implement `frontend/src/components/auction/AuctionCard.tsx` + outcome rendering per FR-015: "sold at price P to buyer B" or "expired/cancelled" with seller named (US3.2); metadata placeholder fallback (edge); reuse `hooks/useMetadata.ts` / `lib/ipfs.ts` including FR-019 safe-link rules (explicit action, new tab, `rel="noopener noreferrer"`, no auto-execution)
 
 **Checkpoint**: All user stories should now be independently functional
 
