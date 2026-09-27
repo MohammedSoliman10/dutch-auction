@@ -182,8 +182,19 @@ TDD is enforced (red → green, constitution §Workflow):
   (17/17) and `AuctionFactory` (7/7); ≥ 95 % lines repo-wide.
 - **Frontend / backend**: Vitest suites (`npm run test:frontend`,
   `npm run backend:test`).
-- **Static analysis**: `solhint` 0 warnings, Slither 0 findings,
+- **Static analysis**: `solhint -w 0` 0 warnings, Slither 0 findings,
   `forge fmt --check`, `forge lint`.
+
+### Solhint policy (justified deviations from `solhint:recommended`)
+
+| Rule setting | Why |
+| --- | --- |
+| `immutable-vars-naming` → `{ immutablesAsConstants: false }` | Public immutables **are** the spec'd ABI getters (e.g. `address payable public immutable seller`), so mixedCase is intended. |
+| `func-name-mixedcase` off | `MIN_DURATION()` / `MAX_DURATION()` are constant getters already deployed + verified; renaming would desync source from the chain. |
+| `gas-strict-inequalities` off | `block.timestamp >= expiresAt` is the exact expiry boundary from data-model §1.2 — strict-inequality rewrites risk an off-by-one. |
+| `gas-indexed-events` off | `AuctionSold(indexed buyer, price)` topic layout is spec'd and consumed via ABI by the indexer. |
+| `function-max-lines: 60` | `createAuction` (57 lines) is one atomic escrow-intake flow (CEI); splitting it post-deploy would break source/deployed parity. |
+| `use-natspec` → ignore `seller` return | solhint parses `returns (address payable)` as a return *name* (`payable`) — false positive on a fully documented one-liner. |
 - **Secrets**: `.env*` gitignored; addresses only from `deployments/*.json` + env.
 
 ## Specification

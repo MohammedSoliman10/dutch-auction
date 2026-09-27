@@ -130,6 +130,10 @@ interface IDutchAuction {
     function reclaim() external;
 
     /// @notice Accepts the factory's escrow `safeTransferFrom`.
+    /// @param operator The address that initiated the safe transfer (the factory).
+    /// @param from The previous owner of the escrowed token (the seller).
+    /// @param tokenId The id being transferred into escrow.
+    /// @param data Extra data accompanying the transfer (empty by the factory).
     /// @return selector Always `this.onERC721Received.selector`.
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
         external

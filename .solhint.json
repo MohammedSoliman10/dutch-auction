@@ -8,6 +8,12 @@
     "not-rely-on-time": "off",
     "avoid-low-level-calls": "off",
     "no-inline-assembly": "warn",
-    "max-line-length": ["warn", 120]
+    "max-line-length": ["warn", 120],
+    "immutable-vars-naming": ["warn", { "immutablesAsConstants": false }],
+    "func-name-mixedcase": "off",
+    "gas-strict-inequalities": "off",
+    "gas-indexed-events": "off",
+    "function-max-lines": ["warn", 60],
+    "use-natspec": ["warn", { "return": { "enabled": true, "ignore": { "function": ["seller"] } } }]
   }
 }
