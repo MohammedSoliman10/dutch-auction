@@ -39,7 +39,11 @@ export interface UseTxFlowResult {
   txHash: `0x${string}` | null;
   error: AppError | null;
   message: TxFlowMessage | null;
+  /** Stages the action and shows the pre-sign summary (FR-019) - no wallet prompt yet. */
   run: (options: TxRunOptions) => Promise<void>;
+  /** Called after the user confirms the summary: requests the wallet signature. */
+  confirm: () => Promise<void>;
+  /** From rejected/failed: re-offers the summary for another attempt (FR-003). */
   retry: () => Promise<void>;
   reset: () => void;
 }
@@ -92,9 +96,11 @@ function buildMessage(
 
 // Transaction state machine per data-model.md section 1.5 (FR-003):
 // idle -> awaiting_signature -> pending(txHash) -> confirming -> success,
-// with rejected/failed terminals. Terminal outcomes only touch this hook's own
-// state: the caller's auction/session data is left unchanged, and retry() is
-// offered from either terminal.
+// with rejected/failed terminals. FR-019: run() only stages the action and
+// surfaces the plain-language summary; the wallet prompt happens exclusively
+// in confirm(), after the user accepts that summary. Terminal outcomes only
+// touch this hook's own state: the caller's auction/session data is left
+// unchanged, and retry() re-offers the summary from either terminal.
 export function useTxFlow(): UseTxFlowResult {
   const [state, setState] = useState<TxFlowState>("idle");
   const [summary, setSummary] = useState<TxSummary | null>(null);
@@ -110,9 +116,22 @@ export function useTxFlow(): UseTxFlowResult {
     setState(next);
   }, []);
 
+  const stageRun = useCallback(
+    (options: TxRunOptions): void => {
+      // Re-entrancy guard: repeated triggers (double-click) are ignored.
+      if (busyRef.current) return;
+      lastRunRef.current = options;
+      setSummary(options.summary);
+      setError(null);
+      setTxHash(null);
+      transition("awaiting_signature");
+    },
+    [transition],
+  );
+
   const executeRun = useCallback(
     async (options: TxRunOptions): Promise<void> => {
-      // Re-entrancy guard: repeated triggers (double-click) are ignored.
+      // Re-entrancy guard: one transaction in flight, duplicates ignored.
       if (busyRef.current) return;
       busyRef.current = true;
       lastRunRef.current = options;
@@ -141,12 +160,27 @@ export function useTxFlow(): UseTxFlowResult {
     [transition],
   );
 
+  const run = useCallback(
+    async (options: TxRunOptions): Promise<void> => {
+      stageRun(options);
+    },
+    [stageRun],
+  );
+
+  const confirm = useCallback(async (): Promise<void> => {
+    const options = lastRunRef.current;
+    if (!options) return;
+    if (stateRef.current !== "awaiting_signature") return;
+    await executeRun(options);
+  }, [executeRun]);
+
   const retry = useCallback(async (): Promise<void> => {
     if (stateRef.current !== "rejected" && stateRef.current !== "failed") return;
     const options = lastRunRef.current;
     if (!options) return;
-    await executeRun(options);
-  }, [executeRun]);
+    // Re-enter the summary step: FR-019 applies to the retried wallet prompt.
+    stageRun(options);
+  }, [stageRun]);
 
   const reset = useCallback(() => {
     lastRunRef.current = null;
@@ -167,7 +201,8 @@ export function useTxFlow(): UseTxFlowResult {
     txHash,
     error,
     message,
-    run: executeRun,
+    run,
+    confirm,
     retry,
     reset,
   };

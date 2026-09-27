@@ -191,6 +191,12 @@ function isUserRejection(node: ErrorLike): boolean {
 }
 
 function findContractErrorName(node: ErrorLike): ContractErrorName | undefined {
+  // viem exposes the decoded custom-error name directly on the revert error
+  // node as well as under its `data` payload - check both before falling back
+  // to name/message matching (FR-007: every contract reason maps to plain text).
+  if (typeof node.errorName === "string" && isContractErrorName(node.errorName)) {
+    return node.errorName;
+  }
   const data = isRecord(node.data) ? node.data : undefined;
   const decodedName =
     data && typeof data.errorName === "string" ? data.errorName : undefined;

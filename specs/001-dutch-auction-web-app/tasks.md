@@ -92,24 +92,24 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T030 [P] [US1] RED: `frontend/src/lib/price.test.ts` — price formula `startingPrice − rate × min(elapsed, duration)` clamped ≥ 0; boundary instants: floor before expiry purchasable, at `expiresAt` disabled, elapsed == duration == floor (Edge Cases)
-- [ ] T031 [P] [US1] RED: `frontend/src/hooks/useCurrentPrice.test.ts` — displayed value re-renders ≥ 1×/second from cached params with no manual refresh, ≤ 1 s lag (FR-005, SC-002)
-- [ ] T032 [P] [US1] RED: `frontend/src/hooks/useTxFlow.test.ts` — full §1.5 state machine; rejection/failure ends terminal with state-unchanged + retry signal (FR-003, US1.4)
-- [ ] T033 [P] [US1] RED: `frontend/src/pages/AuctionPage.test.tsx` — renders all FR-004 fields; US1.3 reasons shown (expired/sold/price-exceeds); US1.6 wrong-network prompt; US1.8 pre-sign summary present before wallet prompt; buy disabled after expiry without reload
+- [X] T030 [P] [US1] RED: `frontend/src/lib/price.test.ts` — price formula `startingPrice − rate × min(elapsed, duration)` clamped ≥ 0; boundary instants: floor before expiry purchasable, at `expiresAt` disabled, elapsed == duration == floor (Edge Cases)
+- [X] T031 [P] [US1] RED: `frontend/src/hooks/useCurrentPrice.test.ts` — displayed value re-renders ≥ 1×/second from cached params with no manual refresh, ≤ 1 s lag (FR-005, SC-002)
+- [X] T032 [P] [US1] RED: `frontend/src/hooks/useTxFlow.test.ts` — full §1.5 state machine; rejection/failure ends terminal with state-unchanged + retry signal (FR-003, US1.4)
+- [X] T033 [P] [US1] RED: `frontend/src/pages/AuctionPage.test.tsx` — renders all FR-004 fields; US1.3 reasons shown (expired/sold/price-exceeds); US1.6 wrong-network prompt; US1.8 pre-sign summary present before wallet prompt; buy disabled after expiry without reload
 
 ### Implementation for User Story 1
 
-- [ ] T034 [P] [US1] Implement `frontend/src/lib/price.ts` price computation per data-model §1.2 (green T030)
-- [ ] T035 [US1] Implement `frontend/src/hooks/useCurrentPrice.ts`: 1-second local ticker from immutable params + periodic on-chain `getPrice()` refetch for correction (R7) (green T031)
-- [ ] T036 [US1] Implement `frontend/src/components/auction/PriceTicker.tsx`, `Countdown.tsx`, `StatusBadge.tsx` (status values verbatim: `live | sold | expired | cancelled`) (depends T034); shared display formatters (ETH/wei, relative time) in `frontend/src/lib/format.ts`
-- [ ] T037 [US1] Implement `frontend/src/pages/AuctionPage.tsx`: NFT preview with placeholder fallback for unresolvable metadata (edge), seller, starting/current price, discount rate, time remaining, status per FR-004; direct URL works without gallery (US1 independence); create `frontend/src/hooks/useMetadata.ts` + `frontend/src/lib/ipfs.ts` (ipfs:// gateway rewrite, bounded fetch, placeholder fallback) and render all metadata-derived links safely per FR-019 clause 2 — new tab only on explicit user action, `rel="noopener noreferrer"`, never auto-executed
-- [ ] T038 [US1] Implement buy flow `frontend/src/components/wallet/BuyPanel.tsx`: payment input defaulting to current price, optional overpay with refund-explainer (FR-006, US1.2), `writeContract(buy)` through useTxFlow (green T032)
-- [ ] T039 [US1] Wire `frontend/src/lib/errors.ts` mappings for all FR-007 reasons → plain-language messages with next step (green part of T033); race loser sees "already sold" (US1.5)
-- [ ] T040 [US1] Implement `frontend/src/components/wallet/NetworkGuard.tsx`: wrong-network switch prompt before any tx (US1.6, FR-002) + zero-balance notice with faucet guidance (FR-002)
-- [ ] T041 [US1] Implement pre-signature plain-language summary modal (action + amount) shown before every wallet prompt (FR-019, US1.8), integrated into useTxFlow
-- [ ] T042 [US1] Add double-click/pending guard (one buy in flight, duplicates ignored — edge) and expiry-time live disable of buy controls (edge: expires while page open)
-- [ ] T043 [US1] A11y on purchase flow: keyboard-only operability + `aria-live` announcements of tx status changes on AuctionPage/buy controls (FR-018, US1.9)
-- [ ] T044 [P] [US1] Create `scripts/seed-demo.sh` (cast commands: mint, approve, createAuction with short duration on Sepolia) so US1 is testable without US2 UI
+- [X] T034 [P] [US1] Implement `frontend/src/lib/price.ts` price computation per data-model §1.2 (green T030)
+- [X] T035 [US1] Implement `frontend/src/hooks/useCurrentPrice.ts`: 1-second local ticker from immutable params + periodic on-chain `getPrice()` refetch for correction (R7) (green T031)
+- [X] T036 [US1] Implement `frontend/src/components/auction/PriceTicker.tsx`, `Countdown.tsx`, `StatusBadge.tsx` (status values verbatim: `live | sold | expired | cancelled`) (depends T034); shared display formatters (ETH/wei, relative time) in `frontend/src/lib/format.ts`
+- [X] T037 [US1] Implement `frontend/src/pages/AuctionPage.tsx`: NFT preview with placeholder fallback for unresolvable metadata (edge), seller, starting/current price, discount rate, time remaining, status per FR-004; direct URL works without gallery (US1 independence); create `frontend/src/hooks/useMetadata.ts` + `frontend/src/lib/ipfs.ts` (ipfs:// gateway rewrite, bounded fetch, placeholder fallback) and render all metadata-derived links safely per FR-019 clause 2 — new tab only on explicit user action, `rel="noopener noreferrer"`, never auto-executed
+- [X] T038 [US1] Implement buy flow `frontend/src/components/wallet/BuyPanel.tsx`: payment input defaulting to current price, optional overpay with refund-explainer (FR-006, US1.2), `writeContract(buy)` through useTxFlow (green T032)
+- [X] T039 [US1] Wire `frontend/src/lib/errors.ts` mappings for all FR-007 reasons → plain-language messages with next step (green part of T033); race loser sees "already sold" (US1.5)
+- [X] T040 [US1] Implement `frontend/src/components/wallet/NetworkGuard.tsx`: wrong-network switch prompt before any tx (US1.6, FR-002) + zero-balance notice with faucet guidance (FR-002)
+- [X] T041 [US1] Implement pre-signature plain-language summary modal (action + amount) shown before every wallet prompt (FR-019, US1.8), integrated into useTxFlow
+- [X] T042 [US1] Add double-click/pending guard (one buy in flight, duplicates ignored — edge) and expiry-time live disable of buy controls (edge: expires while page open)
+- [X] T043 [US1] A11y on purchase flow: keyboard-only operability + `aria-live` announcements of tx status changes on AuctionPage/buy controls (FR-018, US1.9)
+- [X] T044 [P] [US1] Create `scripts/seed-demo.sh` (cast commands: mint, approve, createAuction with short duration on Sepolia) so US1 is testable without US2 UI
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
