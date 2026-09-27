@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { createDb } from "./db.js";
+import { registerErrorHandler } from "./errorHandler.js";
 import { registerRoutes } from "./routes/index.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +29,7 @@ export async function createServer(): Promise<FastifyInstance> {
     db.close();
   });
 
+  registerErrorHandler(app);
   await registerRoutes(app, db);
 
   const spaRoot = resolveSpaRoot();

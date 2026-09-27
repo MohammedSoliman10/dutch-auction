@@ -149,15 +149,15 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 
 ### Tests for User Story 3 (RED first)
 
-- [ ] T055 [P] [US3] RED: `backend/test/api.test.ts` — contracts/api.md conformance: AuctionSummary fields verbatim, wei/token ids as DECIMAL STRINGS, unix-second timestamps, lowercase addresses; query validation (`status` enum, `limit` 1–100 default 20, opaque `cursor`, `seller` address) with 400 `INVALID_PARAMETER`; detail 404 `AUCTION_NOT_FOUND`; health shape
-- [ ] T056 [P] [US3] RED: `backend/test/indexer.test.ts` — replay idempotency via `UNIQUE(tx_hash, log_index)` upsert; `sync_state` resume without double-apply; status derivation verbatim from data-model §1.2 (sold→SOLD, cancelled→CANCELLED, now ≥ expiresAt→EXPIRED, else LIVE) recomputed at read time
+- [X] T055 [P] [US3] RED: `backend/test/api.test.ts` — contracts/api.md conformance: AuctionSummary fields verbatim, wei/token ids as DECIMAL STRINGS, unix-second timestamps, lowercase addresses; query validation (`status` enum, `limit` 1–100 default 20, opaque `cursor`, `seller` address) with 400 `INVALID_PARAMETER`; detail 404 `AUCTION_NOT_FOUND`; health shape
+- [X] T056 [P] [US3] RED: `backend/test/indexer.test.ts` — replay idempotency via `UNIQUE(tx_hash, log_index)` upsert; `sync_state` resume without double-apply; status derivation verbatim from data-model §1.2 (sold→SOLD, cancelled→CANCELLED, now ≥ expiresAt→EXPIRED, else LIVE) recomputed at read time
 
 ### Implementation for User Story 3
 
-- [ ] T057 [US3] Implement `backend/src/routes/auctions.ts`: `GET /api/auctions` (filters + cursor paging, newest `created_block` first) and `GET /api/auctions/:address` per contracts/api.md (green T055)
-- [ ] T058 [US3] Implement `backend/src/indexer.ts`: poll `AuctionCreated` from factory, register auction rows, then poll known auction addresses for `AuctionSold`/`AuctionCancelled`/`AuctionReclaimed`; ≤ 15 s visibility cadence; idempotent upserts + cursor (green T056)
-- [ ] T059 [US3] Implement `backend/src/metadata.ts`: bounded `tokenURI` fetch (http/https/ipfs only, 5 s timeout, 100 KB cap, R13) caching `metadata_name`/`metadata_image`; failures leave nulls (never wedge the indexer)
-- [ ] T060 [US3] Implement read-time `status` + `currentPrice` computation in `backend/src/routes/auctions.ts` per data-model §1.2 (client still re-derives per second — R7); null `buyer`/`salePrice` unless sold
+- [X] T057 [US3] Implement `backend/src/routes/auctions.ts`: `GET /api/auctions` (filters + cursor paging, newest `created_block` first) and `GET /api/auctions/:address` per contracts/api.md (green T055)
+- [X] T058 [US3] Implement `backend/src/indexer.ts`: poll `AuctionCreated` from factory, register auction rows, then poll known auction addresses for `AuctionSold`/`AuctionCancelled`/`AuctionReclaimed`; ≤ 15 s visibility cadence; idempotent upserts + cursor (green T056)
+- [X] T059 [US3] Implement `backend/src/metadata.ts`: bounded `tokenURI` fetch (http/https/ipfs only, 5 s timeout, 100 KB cap, R13) caching `metadata_name`/`metadata_image`; failures leave nulls (never wedge the indexer)
+- [X] T060 [US3] Implement read-time `status` + `currentPrice` computation in `backend/src/routes/auctions.ts` per data-model §1.2 (client still re-derives per second — R7); null `buyer`/`salePrice` unless sold
 - [ ] T061 [P] [US3] Implement `frontend/src/hooks/useAuctions.ts` (gallery query, ~15 s refresh) and `frontend/src/hooks/useAuction.ts` (detail with API → direct on-chain fallback chain for FR-020)
 - [ ] T062 [US3] Implement `frontend/src/pages/GalleryPage.tsx`: auction cards with preview, current price, time remaining; status filter; cursor paging; reach any live auction in ≤ 3 interactions (SC-009)
 - [ ] T063 [US3] Implement empty states (no auctions / no live / no filter match — friendly copy naming why + next step) and degraded view with retry when API unavailable (FR-014, FR-020, US3.4, Edge Cases)

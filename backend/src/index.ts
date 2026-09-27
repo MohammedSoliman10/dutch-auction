@@ -1,4 +1,5 @@
 import { getConfig } from "./config.js";
+import { startIndexer } from "./indexer.js";
 import { createServer } from "./server.js";
 
 async function main(): Promise<void> {
@@ -10,9 +11,11 @@ async function main(): Promise<void> {
   );
 
   const app = await createServer();
+  const indexer = await startIndexer();
 
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => {
+      indexer.stop();
       void app.close().then(
         () => process.exit(0),
         () => process.exit(1),

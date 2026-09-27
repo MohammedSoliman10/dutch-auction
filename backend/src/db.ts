@@ -68,6 +68,8 @@ export interface Db {
   upsertAuction(input: AuctionInput): void;
   getAuction(address: string): AuctionRecord | null;
   listAuctions(params?: ListAuctionsParams): AuctionListPage;
+  listAuctionAddresses(): string[];
+  listAuctionsMissingMetadata(limit: number): AuctionRecord[];
   recordEvent(event: EventInput): boolean;
   getSyncState(key?: string): SyncState | null;
   setSyncState(lastBlock: number, key?: string): void;
@@ -194,6 +196,13 @@ export function openDb(path: string = getConfig().dbPath): Db {
       updated_block = MAX(excluded.updated_block, auctions.updated_block)
   `);
   const selectAuctionStmt = raw.prepare(`SELECT * FROM auctions WHERE address = ?`);
+  const selectAddressesStmt = raw.prepare(`SELECT address FROM auctions ORDER BY address`);
+  const selectMissingMetadataStmt = raw.prepare(`
+    SELECT * FROM auctions
+    WHERE token_uri IS NULL OR metadata_name IS NULL
+    ORDER BY created_block ASC, address ASC
+    LIMIT ?
+  `);
   const insertEventStmt = raw.prepare(`
     INSERT OR IGNORE INTO events (block_number, tx_hash, log_index, address, event_name, args_json)
     VALUES (@block_number, @tx_hash, @log_index, @address, @event_name, @args_json)
@@ -247,6 +256,21 @@ export function openDb(path: string = getConfig().dbPath): Db {
         items: page.map((row) => toRecord(row, now)),
         nextCursor: hasMore ? encodeCursor(offset + limit) : null,
       };
+    },
+
+    // The indexer polls every known auction for settlement events; the gallery
+    // limit cap (100) must not truncate that list.
+    listAuctionAddresses(): string[] {
+      const rows = selectAddressesStmt.all() as Array<{ address: string }>;
+      return rows.map((row) => row.address);
+    },
+
+    // Rows whose best-effort cache (R13) is still incomplete; the indexer
+    // retries a bounded number of them per round.
+    listAuctionsMissingMetadata(limit: number): AuctionRecord[] {
+      const now = nowSeconds();
+      const rows = selectMissingMetadataStmt.all(limit) as AuctionRow[];
+      return rows.map((row) => toRecord(row, now));
     },
 
     recordEvent(event: EventInput): boolean {
@@ -366,14 +390,16 @@ function decodeCursor(cursor: string | undefined): number {
   if (cursor === undefined) {
     return 0;
   }
-  const offset = parseCursor(cursor);
+  const offset = decodeAuctionCursor(cursor);
   if (offset === null) {
     throw new Error(`Invalid cursor: "${cursor}"`);
   }
   return offset;
 }
 
-function parseCursor(cursor: string): number | null {
+// Exported so the API layer can reject a malformed cursor with
+// 400 INVALID_PARAMETER before querying; the cursor stays opaque to clients.
+export function decodeAuctionCursor(cursor: string): number | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
