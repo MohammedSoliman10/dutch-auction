@@ -1,5 +1,6 @@
 {
   "chainId": 11155111,
   "nft": "0x026B70A2016377C1854225C54145Cf3f6953346e",
-  "factory": "0x4E5d69ad5F9c0c0664AF9ab4D79e93de6Ae33215"
+  "factory": "0x4E5d69ad5F9c0c0664AF9ab4D79e93de6Ae33215",
+  "startBlock": 11795305
 }

@@ -21,6 +21,31 @@ export const addresses = {
   nft: config.nftAddress,
 } as const;
 
+/**
+ * Factory deploy block from `deployments/sepolia.json` (`startBlock`), or
+ * undefined when the manifest predates the field. Seeds the indexer cursor so a
+ * fresh database scans only post-deploy blocks instead of crawling 0→head
+ * (which takes ~25 minutes on Sepolia) — first sync must fit SC-007's 15 s.
+ */
+export const deployBlock = loadDeployBlock();
+
+function loadDeployBlock(): number | undefined {
+  const manifest = path.join("deployments", "sepolia.json");
+  const candidates = [path.resolve(process.cwd(), manifest), path.resolve(moduleDir, "..", "..", manifest)];
+  const file = candidates.find((candidate) => existsSync(candidate));
+  if (file === undefined) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+    if (typeof parsed !== "object" || parsed === null) return undefined;
+    const start = (parsed as { startBlock?: unknown }).startBlock;
+    return typeof start === "number" && Number.isSafeInteger(start) && start >= 0 ? start : undefined;
+  } catch {
+    // A malformed manifest must not crash boot: the cursor falls back to block 0
+    // (slower first sync, still correct).
+    return undefined;
+  }
+}
+
 function loadAbi(sourceDir: string, contract: string): Abi {
   const artifact = path.join("out", sourceDir, `${contract}.json`);
   const candidates = [path.resolve(process.cwd(), artifact), path.resolve(moduleDir, "..", "..", artifact)];

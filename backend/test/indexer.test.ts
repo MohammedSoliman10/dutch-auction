@@ -35,6 +35,8 @@ const chainMocks = vi.hoisted(() => {
   const auctionReclaimed = { type: "event", name: "AuctionReclaimed", inputs: [] };
   return {
     chainId: 11155111,
+    // Manifest startBlock seed for a fresh sync cursor; undefined => block 0.
+    deployBlock: undefined as number | undefined,
     addresses: {
       factory: "0x4444444444444444444444444444444444444444",
       nft: "0x3333333333333333333333333333333333333333",
@@ -169,6 +171,17 @@ function eventCount(): number {
   }
 }
 
+/** Mirrors startIndexer's catch-up loop: windows are provider-capped (10 blocks),
+ *  so reaching head can take several rounds. */
+async function syncUntilCaughtUp(dbHandle: Db, maxRounds = 50): Promise<{ caughtUp: boolean }> {
+  let result = await syncOnce(dbHandle);
+  for (let round = 1; round < maxRounds && !result.caughtUp; round += 1) {
+    result = await syncOnce(dbHandle);
+  }
+  if (!result.caughtUp) throw new Error(`indexer did not catch up within ${maxRounds} rounds`);
+  return result;
+}
+
 let dir: string;
 let db: Db;
 let factoryLogs: unknown[];
@@ -180,6 +193,7 @@ beforeEach(() => {
   db = createDb(path.join(dir, "index.db"));
   factoryLogs = [];
   auctionLogs = [];
+  chainMocks.deployBlock = undefined;
   chainMocks.client.getBlockNumber.mockResolvedValue(100n);
   chainMocks.client.getLogs.mockImplementation(
     async (params) => (Array.isArray(params.address) ? auctionLogs : factoryLogs),
@@ -198,7 +212,7 @@ describe("T058 - AuctionCreated registration + cursor", () => {
   it("registers an AuctionCreated row verbatim and advances the sync cursor", async () => {
     factoryLogs = [createdLog()];
 
-    const result = await syncOnce(db);
+    const result = await syncUntilCaughtUp(db);
 
     expect(result.caughtUp).toBe(true);
     const items = db.listAuctions({ limit: 100 }).items;
@@ -239,7 +253,7 @@ describe("T058 - AuctionCreated registration + cursor", () => {
 describe("T056 - replay idempotency via UNIQUE(tx_hash, log_index)", () => {
   it("replaying the same AuctionCreated log yields a single row and single event", async () => {
     factoryLogs = [createdLog()];
-    await syncOnce(db);
+    await syncUntilCaughtUp(db);
 
     // The cursor moved on, but a flaky provider replays the log anyway.
     chainMocks.client.getBlockNumber.mockResolvedValue(105n);
@@ -266,7 +280,7 @@ describe("T056 - replay idempotency via UNIQUE(tx_hash, log_index)", () => {
 
   it("replaying AuctionSold does not double-apply state", async () => {
     factoryLogs = [createdLog()];
-    await syncOnce(db);
+    await syncUntilCaughtUp(db);
     chainMocks.client.getBlockNumber.mockResolvedValue(110n);
     factoryLogs = [];
     auctionLogs = [soldLog()];
@@ -290,7 +304,7 @@ describe("T056 - replay idempotency via UNIQUE(tx_hash, log_index)", () => {
 describe("T056 - sync_state resume without double-apply", () => {
   it("resumes strictly from lastBlock + 1 on the next round", async () => {
     factoryLogs = [createdLog()];
-    await syncOnce(db);
+    await syncUntilCaughtUp(db);
     expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(100);
 
     const callsBefore = chainMocks.client.getLogs.mock.calls.length;
@@ -311,21 +325,27 @@ describe("T056 - sync_state resume without double-apply", () => {
     expect(eventCount()).toBe(1);
   });
 
-  it("advances the cursor in bounded windows until caught up", async () => {
-    chainMocks.client.getBlockNumber.mockResolvedValue(5000n);
+  it("advances the cursor in provider-safe windows until caught up", async () => {
+    // Alchemy free tier rejects eth_getLogs windows wider than 10 blocks with
+    // -32600, so every window must stay within that provider cap.
+    chainMocks.client.getBlockNumber.mockResolvedValue(25n);
 
     const first = await syncOnce(db);
     expect(first.caughtUp).toBe(false);
-    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(1999);
+    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(9);
 
     const second = await syncOnce(db);
     expect(second.caughtUp).toBe(false);
-    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(3999);
+    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(19);
 
     const third = await syncOnce(db);
     expect(third.caughtUp).toBe(true);
-    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(5000);
+    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(25);
     expect(eventCount()).toBe(0);
+
+    for (const [params] of chainMocks.client.getLogs.mock.calls) {
+      expect(Number(params.toBlock) - Number(params.fromBlock)).toBeLessThan(10);
+    }
   });
 });
 
@@ -457,7 +477,7 @@ describe("T059 - metadata enrichment hook", () => {
     factoryLogs = [createdLog()];
     chainMocks.client.readContract.mockRejectedValue(new Error("rpc down"));
 
-    await expect(syncOnce(db)).resolves.toEqual({ caughtUp: true });
+    await expect(syncUntilCaughtUp(db)).resolves.toEqual({ caughtUp: true });
 
     const row = db.getAuction(AUCTION_A);
     expect(row).toMatchObject({
@@ -473,7 +493,7 @@ describe("T059 - metadata enrichment hook", () => {
     chainMocks.client.readContract.mockResolvedValue("ipfs://QmMeta123");
     vi.mocked(resolveTokenMetadata).mockRejectedValue(new Error("fetch exploded"));
 
-    await expect(syncOnce(db)).resolves.toEqual({ caughtUp: true });
+    await expect(syncUntilCaughtUp(db)).resolves.toEqual({ caughtUp: true });
 
     const row = db.getAuction(AUCTION_A);
     expect(row).toMatchObject({
@@ -510,5 +530,28 @@ describe("T058 - polling cadence (SC-007 <= 15s visibility)", () => {
       setTimeout(resolve, 60);
     });
     expect(chainMocks.client.getBlockNumber.mock.calls.length).toBe(callsAtStop);
+  });
+});
+
+describe("fresh cursor seeds from the factory deploy block (FR-014 first sync)", () => {
+  it("skips pre-deploy blocks on a fresh database instead of crawling from block 0", async () => {
+    chainMocks.deployBlock = 50;
+    chainMocks.client.getBlockNumber.mockResolvedValue(55n);
+
+    await syncOnce(db);
+
+    const factoryScan = chainMocks.client.getLogs.mock.calls[0][0];
+    expect(factoryScan.fromBlock).toBe(50n);
+    expect(db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock).toBe(55);
+  });
+
+  it("resumes from the stored cursor once one exists, ignoring the seed", async () => {
+    chainMocks.deployBlock = 50;
+    db.setSyncState(80, INDEXER_SYNC_KEY);
+    chainMocks.client.getBlockNumber.mockResolvedValue(100n);
+
+    await syncOnce(db);
+
+    expect(chainMocks.client.getLogs.mock.calls[0][0].fromBlock).toBe(81n);
   });
 });

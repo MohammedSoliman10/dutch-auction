@@ -5,14 +5,17 @@
 // the cursor without double-applying. Only src/index.ts starts it; this module
 // stays side-effect free so tests can import it.
 import type { Abi, AbiEvent } from "viem";
-import { abis, addresses, chainId, client } from "./chain.js";
+import { abis, addresses, chainId, client, deployBlock } from "./chain.js";
 import { createDb, INDEXER_SYNC_KEY, type AuctionInput, type Db, type EventInput } from "./db.js";
 import { resolveTokenMetadata } from "./metadata.js";
 
 export const POLL_INTERVAL_MS = 10_000; // SC-007: sale outcome visible within 15 s
 
 const CATCHUP_DELAY_MS = 250;
-const MAX_BLOCK_RANGE = 2_000;
+// Alchemy's free tier rejects eth_getLogs windows wider than 10 blocks
+// (-32600), so windows must stay provider-safe: catch-up speed comes from
+// CATCHUP_DELAY_MS between rounds, not from wider ranges.
+const MAX_BLOCK_RANGE = 10;
 const MAX_METADATA_PER_ROUND = 3;
 
 export interface StartIndexerOptions {
@@ -40,7 +43,12 @@ interface DecodedLog {
 /** Polls one bounded block window, applies new logs, advances the cursor. */
 export async function syncOnce(db: Db): Promise<SyncRoundResult> {
   const head = Number(await client.getBlockNumber());
-  const fromBlock = (db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock ?? -1) + 1;
+  const stored = db.getSyncState(INDEXER_SYNC_KEY)?.lastBlock;
+  // Neither the factory nor any auction can emit before the factory's deploy
+  // block, so flooring at the manifest startBlock is safe and turns a fresh
+  // Sepolia sync from ~25 min of 0→head crawling into a single round.
+  const floor = deployBlock ?? 0;
+  const fromBlock = Math.max(stored === undefined ? 0 : stored + 1, floor);
   if (fromBlock > head) {
     return { caughtUp: true };
   }
