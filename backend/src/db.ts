@@ -163,6 +163,7 @@ export function openDb(path: string = getConfig().dbPath): Db {
   raw.pragma("foreign_keys = ON");
   raw.exec(SCHEMA);
 
+  // On replay, terminal statuses (data-model 1.2) and provenance never regress.
   const insertAuctionStmt = raw.prepare(`
     INSERT INTO auctions (
       address, chain_id, seller, nft_contract, token_id, starting_price, discount_rate,
@@ -183,14 +184,14 @@ export function openDb(path: string = getConfig().dbPath): Db {
       duration = excluded.duration,
       start_at = excluded.start_at,
       expires_at = excluded.expires_at,
-      status = excluded.status,
+      status = CASE WHEN auctions.status IN ('sold', 'cancelled') THEN auctions.status ELSE excluded.status END,
       buyer = COALESCE(excluded.buyer, auctions.buyer),
       sale_price = COALESCE(excluded.sale_price, auctions.sale_price),
       nft_returned_at = COALESCE(excluded.nft_returned_at, auctions.nft_returned_at),
       token_uri = COALESCE(excluded.token_uri, auctions.token_uri),
       metadata_name = COALESCE(excluded.metadata_name, auctions.metadata_name),
       metadata_image = COALESCE(excluded.metadata_image, auctions.metadata_image),
-      updated_block = excluded.updated_block
+      updated_block = MAX(excluded.updated_block, auctions.updated_block)
   `);
   const selectAuctionStmt = raw.prepare(`SELECT * FROM auctions WHERE address = ?`);
   const insertEventStmt = raw.prepare(`
