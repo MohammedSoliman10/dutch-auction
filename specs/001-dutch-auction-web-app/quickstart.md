@@ -1,6 +1,6 @@
 # Quickstart & Validation Guide: Dutch Auction NFT Web App
 
-**Feature**: 001-dutch-auction-web-app | **Branch**: `001-dutch-auction-web-app`
+**Feature**: 001-dutch-auction-web-app | **Branch**: `main`
 
 Runnable validation for the design in this feature folder. Implementation code lives
 in the repo, not here — this is the run/verify guide.
@@ -21,8 +21,8 @@ forge fmt --check             # formatting gate
 forge test                    # unit + fuzz + invariant suite
 forge coverage                # thresholds: 100% branch on auction paths, ≥95% lines
 slither .                     # no new high/medium findings
-npx solhint 'src/**/*.sol'    # zero warnings on changed files
-forge snapshot                # gas snapshot reviewed against committed baseline
+npm run lint:contracts         # solhint -w 0 on src/** + script/** (zero warnings)
+forge snapshot                 # gas snapshot reviewed against committed baseline
 ```
 
 **Expected**: all commands exit 0; invariant tests report 0 failed runs across the
@@ -32,17 +32,22 @@ configured depth; coverage report meets thresholds.
 
 ```bash
 cp .env.example .env          # fill RPC_URL, DEPLOYER_KEY (never commit .env)
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify
+set -a; . ./.env; set +a
+# --slow: providers that cap in-flight txs (e.g. Alchemy) reject batched sends
+forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --private-key "$DEPLOYER_KEY" \
+  --broadcast --slow
+# keyless verification (see README): forge verify-contract <ADDR> src/… --verifier sourcify
 ```
 
 **Expected**: `deployments/sepolia.json` written with `DutchAuctionNFT`,
-`AuctionFactory` addresses and `chainId: 11155111`.
+`AuctionFactory` addresses, `chainId: 11155111` and `startBlock` (the factory's
+deploy block — the indexer's first-scan floor).
 
 ## 3. Backend (indexer + API)
 
 ```bash
 npm install
-npm run backend:dev           # env: RPC_URL, FACTORY_ADDRESS, PORT=3001
+npm run dev:backend             # env: RPC_URL, FACTORY_ADDRESS, PORT=3001
 curl -s localhost:3001/api/health
 ```
 
@@ -52,15 +57,17 @@ curl -s localhost:3001/api/health
 ## 4. Frontend
 
 ```bash
-npm run frontend:dev          # Vite dev server, proxies /api → backend
+npm run dev:frontend             # Vite dev server, proxies /api → backend
 ```
 
 **Expected**: app opens on the gallery, "Connect Wallet" prompts (RainbowKit),
 network guard shows Sepolia when on the wrong chain (FR-002).
 
-Production check (SC-005): `npm run build` then start the backend — it serves the
-built SPA + API from one public URL; verify the flow from that URL with a fresh
-browser profile and only a wallet extension installed (no CLI).
+Production check (SC-005): push to GitHub — Vercel builds per `vercel.json`
+(`npm run build --workspace frontend` → `frontend/dist`, SPA rewrite for deep
+links, `VITE_*` env vars set on the project) — then verify the flow from the
+public URL with a fresh browser profile and only a wallet extension installed
+(no CLI).
 
 ## 5. End-to-end validation scenarios
 
@@ -95,9 +102,9 @@ applicable, or short durations (60 s minimum) chosen at creation.
 | Unit/fuzz/invariant | `forge test` | 0 failures |
 | Coverage gate | `forge coverage --report summary` | 100% branch on auction paths, ≥ 95% lines |
 | Gas regression | `forge snapshot` | no unexplained deltas in PR |
-| Static analysis | `slither .` + `npx solhint 'src/**/*.sol'` | no new high/med; 0 warnings |
+| Static analysis | `slither .` + `npm run lint:contracts` | no new high/med; 0 warnings (`src/**` + `script/**`) |
 | Backend | `npm run backend:test` | Vitest green (API contract + indexer idempotency) |
-| Frontend | `npm run frontend:test` | Vitest + RTL green (price hook, status derivation, tx flow) |
+| Frontend | `npm run test:frontend` | Vitest + RTL green (price hook, status derivation, tx flow) |
 | Build | `npm run build` | SPA bundles; backend compiles |
 
 ## 7. Reset / rerun
