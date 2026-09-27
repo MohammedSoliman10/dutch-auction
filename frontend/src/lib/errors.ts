@@ -223,7 +223,6 @@ export function mapTxError(err: unknown): AppError {
   const nodes = collectErrorNodes(err);
 
   if (nodes.some(isUserRejection)) return toAppError("USER_REJECTED");
-
   for (const node of nodes) {
     const contractError = findContractErrorName(node);
     if (contractError) return toAppError(contractError);
@@ -279,4 +278,18 @@ export function mapTxError(err: unknown): AppError {
   }
 
   return toAppError("UNKNOWN");
+}
+
+/**
+ * `waitForTransactionReceipt` resolves even when the transaction reverted
+ * on-chain, which would otherwise be reported as a success. Seller flows
+ * (approve / create / cancel / reclaim / mint) call this inside the tx
+ * handle's `wait()` so a reverted receipt surfaces as a mapped plain-language
+ * failure instead of a false success (FR-003, US2.5).
+ */
+export function assertTxConfirmed(receipt: { status?: string } | null | undefined): void {
+  if (!receipt || receipt.status !== "success") {
+    // Message is only used for mapping (CONTRACT_REVERT) - never shown raw.
+    throw new Error("execution reverted: the contract declined this transaction on-chain");
+  }
 }

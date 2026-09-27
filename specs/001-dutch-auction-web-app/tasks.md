@@ -123,19 +123,19 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 
 ### Tests for User Story 2 (RED first)
 
-- [ ] T045 [P] [US2] RED: `frontend/src/lib/auctionParams.test.ts` — validation quotes constraints verbatim: "`60s ≤ duration ≤ 2_592_000`, default 300" (FR-011), `startingPrice ≥ discountRate × duration` with equality VALID (FR-008), `startingPrice > 0`, `discountRate ≥ 1`, each failure returns a plain-language reason naming the violated rule (US2.3)
-- [ ] T046 [P] [US2] RED: `frontend/src/pages/MintPage.test.tsx` (US2.1: mint result → wallet owns token) and `frontend/src/pages/CreateAuctionPage.test.tsx` (US2.2 pre-submit rejection with no tx sent; US2.6 approval-before-create ordering)
+- [X] T045 [P] [US2] RED: `frontend/src/lib/auctionParams.test.ts` — validation quotes constraints verbatim: "`60s ≤ duration ≤ 2_592_000`, default 300" (FR-011), `startingPrice ≥ discountRate × duration` with equality VALID (FR-008), `startingPrice > 0`, `discountRate ≥ 1`, each failure returns a plain-language reason naming the violated rule (US2.3)
+- [X] T046 [P] [US2] RED: `frontend/src/pages/MintPage.test.tsx` (US2.1: mint result → wallet owns token) and `frontend/src/pages/CreateAuctionPage.test.tsx` (US2.2 pre-submit rejection with no tx sent; US2.6 approval-before-create ordering)
 
 ### Implementation for User Story 2
 
-- [ ] T047 [US2] Implement `frontend/src/lib/auctionParams.ts` (green T045)
-- [ ] T048 [US2] Implement `frontend/src/pages/MintPage.tsx`: metadata URI input, `writeContract(mintNFT)` via useTxFlow, success shows new token id + wallet ownership (FR-010, US2.1)
-- [ ] T049 [US2] Implement `frontend/src/pages/CreateAuctionPage.tsx`: inputs for starting price, discount rate, duration (default 300 s), pre-submit validation via T047 with plain-language reasons and NO transaction on invalid input (FR-011, US2.3)
-- [ ] T050 [US2] Implement approval step in `frontend/src/pages/CreateAuctionPage.tsx`: pre-flight check of factory approval → guide one-time approve tx → proceed to create only after approval confirms (US2.6, FR-011); approval failure → "not owned or not approved" edge message
-- [ ] T051 [US2] Implement post-creation success flow: escrow confirmation, countdown from `startAt`, status `live` at starting price, redirect to auction page (US2.2)
-- [ ] T052 [US2] Implement `frontend/src/components/auction/SellerActions.tsx`: cancel while live + reclaim after expiry with plain-language guards (`NotSeller`/`NotLive`/`AuctionNotExpired`) and success messaging that the NFT returned (FR-013, US2.5)
-- [ ] T053 [US2] Implement `frontend/src/pages/MyAuctionsPage.tsx` (route `/my`): seller's auctions via API seller filter when reachable, else direct on-chain enumeration of the factory registry (keeps US2 independent of US3) — includes cancel/reclaim entry points (FR-014 seller filter)
-- [ ] T054 [US2] Implement sale-outcome messaging on seller views: atomic proceeds + NFT transfer confirmed messaging per US2.4, visibility within SC-007 window
+- [X] T047 [US2] Implement `frontend/src/lib/auctionParams.ts` (green T045)
+- [X] T048 [US2] Implement `frontend/src/pages/MintPage.tsx`: metadata URI input, `writeContract(mintNFT)` via useTxFlow, success shows new token id + wallet ownership (FR-010, US2.1)
+- [X] T049 [US2] Implement `frontend/src/pages/CreateAuctionPage.tsx`: inputs for starting price, discount rate, duration (default 300 s), pre-submit validation via T047 with plain-language reasons and NO transaction on invalid input (FR-011, US2.3)
+- [X] T050 [US2] Implement approval step in `frontend/src/pages/CreateAuctionPage.tsx`: pre-flight check of factory approval → guide one-time approve tx → proceed to create only after approval confirms (US2.6, FR-011); approval failure → "not owned or not approved" edge message
+- [X] T051 [US2] Implement post-creation success flow: escrow confirmation, countdown from `startAt`, status `live` at starting price, redirect to auction page (US2.2)
+- [X] T052 [US2] Implement `frontend/src/components/auction/SellerActions.tsx`: cancel while live + reclaim after expiry with plain-language guards (`NotSeller`/`NotLive`/`AuctionNotExpired`) and success messaging that the NFT returned (FR-013, US2.5)
+- [X] T053 [US2] Implement `frontend/src/pages/MyAuctionsPage.tsx` (route `/my`): seller's auctions via API seller filter when reachable, else direct on-chain enumeration of the factory registry (keeps US2 independent of US3) — includes cancel/reclaim entry points (FR-014 seller filter)
+- [X] T054 [US2] Implement sale-outcome messaging on seller views: atomic proceeds + NFT transfer confirmed messaging per US2.4, visibility within SC-007 window
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
