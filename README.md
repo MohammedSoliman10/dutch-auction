@@ -111,7 +111,7 @@ are ignored by git (audited in task T071).
 | Frontend | `npm run dev:frontend` · `npm run test:frontend` · `npm run build --workspace frontend` |
 | Backend | `npm run dev:backend` · `npm run backend:test` · `npm run build --workspace backend` · `npm run start --workspace backend` |
 | All tests | `npm run test:contracts && npm run test:frontend && npm run backend:test` |
-| Quality gates | `npm run build && npm run fmt:check && npm run lint:contracts && npm run scan` |
+| Quality gates | `npm run build && npm run fmt:check && npm run lint:contracts && forge lint && npm run scan` |
 
 ## Deploying the contracts (Sepolia)
 
