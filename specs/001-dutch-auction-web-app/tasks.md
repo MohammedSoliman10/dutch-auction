@@ -58,7 +58,7 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 - [X] T014 [P] Implement `src/DutchAuctionNFT.sol`: OZ `ERC721URIStorage`, name "Soliman Web3", symbol "SW3", `mintNFT(string)` with `_safeMint` to `msg.sender`, `_setTokenURI`, id increment, `EmptyURI()` guard — full NatSpec; turns T011 green
 - [X] T015 RED: Write `test/invariant/AuctionAccounting.invariant.t.sol` covering the three R15 invariants: (1) ETH conservation — contract balance equals pending obligations (0 for escrowed auctions); (2) NFT conservation — auction holds the NFT iff unsold and uncancelled; (3) at most one sale per auction — with ghost-variable tracking
 - [X] T016 Fix any gaps surfaced by T015 in `src/DutchAuction.sol` / `src/AuctionFactory.sol` until `forge test --match-contract AuctionAccounting` passes (invariant handler: buy/warp/cancel/reclaim fuzzed sequences)
-- [X] T017 [P] Create `script/Deploy.s.sol`: deploys DutchAuctionNFT + AuctionFactory, writes `{ chainId, nft, factory }` to `deployments/<network>.json` via `vm.writeJson`
+- [X] T017 [P] Create `script/Deploy.s.sol`: deploys DutchAuctionNFT + AuctionFactory, writes `{ chainId, nft, factory, startBlock }` to `deployments/<network>.json` via `vm.writeJson` (`startBlock` added in bf2c4b3/14bb8e2 to seed the indexer cursor; tests redirect output via `DEPLOYMENTS_DIR`)
 - [X] T018 Deploy to Sepolia with `forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify` (requires DEPLOYER_KEY with Sepolia ETH) and commit resulting `deployments/sepolia.json`
 
 ### Frontend shell (blocks US1/US2/US3)
@@ -177,7 +177,7 @@ NON-NEGOTIABLE) and plan research R15 mandate red→green: each test task MUST f
 - [ ] T068 Performance vs SC-010 in `frontend/`: route code-splitting, React Query caching — gallery content ≤ 2 s at 95%; confirm no full-page reloads anywhere (FR-017)
 - [ ] T069 Run contract quality gates and fix all findings: `forge fmt --check`, `forge coverage --report summary` (100% branch on DutchAuction/AuctionFactory, ≥ 95% lines repo-wide), `npx solhint 'src/**/*.sol'` (0 warnings), `slither .` (no new high/medium), `forge snapshot` vs committed baseline (Constitution I/III/V)
 - [ ] T070 Run `npm run test:frontend` and `npm run backend:test` — all Vitest suites green; align assertions with quickstart §6 mapping
-- [ ] T071 Secrets/config audit: `.env` gitignored and absent from VCS, `.env.example` complete, no hardcoded addresses/keys anywhere — addresses only from `deployments/sepolia.json` + env (Constitution Toolchain & Safety)
+- [X] T071 Secrets/config audit: `.env` gitignored and absent from VCS, `.env.example` complete, no hardcoded addresses/keys anywhere — addresses only from `deployments/sepolia.json` + env (Constitution Toolchain & Safety) — verified 2026-09-27: `git grep` clean for deployer key + RPC key, `.env`/`frontend/.env.local`/`broadcast/`/`backend/data/` untracked, both `.env.example` files complete, zero hardcoded addresses in `src/`, `backend/src/`, `frontend/src/` prod sources
 - [ ] T072 Execute `specs/001-dutch-auction-web-app/quickstart.md` end-to-end: all commands green + scenarios 1–17 validated on Sepolia; record results
 - [ ] T073 [P] Create `README.md`: architecture overview, local dev commands, Sepolia deploy steps, env vars; rationale: SC-005 (a newcomer completes setup with zero assistance)
 - [ ] T074 Refactor pass per Constitution V: remove dead/commented code, intent-revealing names only, no logic-hidden-in-comments — reviewed against `checklists/full.md` items
