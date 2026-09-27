@@ -13,14 +13,19 @@ import {DutchAuctionNFT} from "../src/DutchAuctionNFT.sol";
 ///         single source frontend/backend config reads (no hardcoded addresses).
 /// @dev Usage: `forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify`
 contract Deploy is Script {
-    /// @notice Deploys both contracts and writes the deployments manifest.
+    /// @notice Deploys both contracts and writes the deployments manifest
+    ///         `{ chainId, nft, factory, startBlock }`. `startBlock` is the
+    ///         factory's deploy block — the indexer's safe first-scan floor.
+    ///         `DEPLOYMENTS_DIR` overrides the output directory so tests never
+    ///         touch live manifests.
     function run() external {
         vm.startBroadcast();
         DutchAuctionNFT nft = new DutchAuctionNFT();
         AuctionFactory factory = new AuctionFactory();
         vm.stopBroadcast();
 
-        string memory path = string.concat("deployments/", networkName(block.chainid), ".json");
+        string memory dir = vm.envOr("DEPLOYMENTS_DIR", string("deployments"));
+        string memory path = string.concat(dir, "/", networkName(block.chainid), ".json");
         string memory json = string.concat(
             '{"chainId":',
             vm.toString(block.chainid),
@@ -28,7 +33,9 @@ contract Deploy is Script {
             vm.toString(address(nft)),
             '","factory":"',
             vm.toString(address(factory)),
-            '"}'
+            '","startBlock":',
+            vm.toString(block.number),
+            "}"
         );
         vm.writeJson(json, path);
     }
