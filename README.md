@@ -195,6 +195,8 @@ TDD is enforced (red → green, constitution §Workflow):
 | `gas-indexed-events` off | `AuctionSold(indexed buyer, price)` topic layout is spec'd and consumed via ABI by the indexer. |
 | `function-max-lines: 60` | `createAuction` (57 lines) is one atomic escrow-intake flow (CEI); splitting it post-deploy would break source/deployed parity. |
 | `use-natspec` → ignore `seller` return | solhint parses `returns (address payable)` as a return *name* (`payable`) — false positive on a fully documented one-liner. |
+| `import-path-check` off | solhint resolves imports node-style from `node_modules` only and cannot read Foundry `remappings.txt`; `forge build` (a PR gate) proves import existence for real. |
+- **Lint scope**: `lint:contracts` gates `src/**` + `script/**` (all production Solidity). `test/**` is excluded — constitution III's NatSpec mandate targets the contracts that custody funds; forge-std-style test helpers follow Foundry convention.
 - **Secrets**: `.env*` gitignored; addresses only from `deployments/*.json` + env.
 
 ## Specification

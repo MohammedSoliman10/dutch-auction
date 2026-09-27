@@ -14,6 +14,7 @@
     "gas-strict-inequalities": "off",
     "gas-indexed-events": "off",
     "function-max-lines": ["warn", 60],
-    "use-natspec": ["warn", { "return": { "enabled": true, "ignore": { "function": ["seller"] } } }]
+    "use-natspec": ["warn", { "return": { "enabled": true, "ignore": { "function": ["seller"] } } }],
+    "import-path-check": "off"
   }
 }

@@ -13,7 +13,7 @@
     "build:contracts": "forge build",
     "test:contracts": "forge test -vv",
     "coverage": "forge coverage --report summary",
-    "lint:contracts": "solhint -w 0 'src/**/*.sol'",
+    "lint:contracts": "solhint -w 0 'src/**/*.sol' 'script/**/*.sol'",
     "scan": "slither . --config-file slither.config.json",
     "test:frontend": "npm run test --workspace frontend",
     "test:backend": "npm run test --workspace backend",
