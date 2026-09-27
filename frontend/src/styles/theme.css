@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/*
+ * FR-016 industrial dark "Forge" theme: ink-black canvas, hairline grids, a single
+ * ember-orange accent reserved for primary actions / live status / key highlights,
+ * bold white display headings. Dark-only (no light mode in v1); status semantics are
+ * conveyed with ember + neutrals only - never introduce greens/blues.
+ */
+@theme {
+  --color-ink: #050507;
+  --color-panel: #0b0b0e;
+  --color-hairline: #26262b;
+
+  --color-ember: #ff5a1f;
+  --color-ember-hover: #e64e15;
+  --color-ember-muted: #a34419;
+
+  --color-display: #f5f5f4;
+  --color-muted: #9a9aa2;
+
+  --font-display: "Archivo Black", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  --text-display-xl: 3.5rem;
+  --text-display-xl--line-height: 1.05;
+  --text-display-lg: 2.5rem;
+  --text-display-lg--line-height: 1.1;
+  --text-display-md: 1.75rem;
+  --text-display-md--line-height: 1.15;
+  --text-display-sm: 1.25rem;
+  --text-display-sm--line-height: 1.25;
+}
+
+@layer base {
+  html {
+    background: var(--color-ink);
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-display);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    color: var(--color-display);
+    /* Archivo Black ships a single 400 weight; avoid synthetic bold. */
+    font-weight: 400;
+  }
+
+  ::selection {
+    background-color: var(--color-ember);
+    color: #000000;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Subtle 1px hairline grid used behind sections (see components/layout/GridBackdrop). */
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--color-hairline) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-hairline) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: center center;
+  }
+}
