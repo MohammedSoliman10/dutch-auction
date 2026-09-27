@@ -1,0 +1,33 @@
+# Secrets — never commit (Constitution)
+.env
+.env.*
+!.env.example
+*.key
+keystore/
+
+# Foundry
+out/
+cache/
+broadcast/
+
+# Node
+node_modules/
+*.log
+
+# Builds / coverage
+frontend/dist/
+backend/dist/
+coverage/
+lcov.info
+
+# Runtime data
+backend/data/
+*.db
+*.db-*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

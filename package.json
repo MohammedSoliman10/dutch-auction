@@ -1,0 +1,30 @@
+{
+  "name": "dutch-auction",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Publicly hosted Dutch-auction NFT dApp (Sepolia)",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "fmt:check": "forge fmt --check",
+    "fmt:contracts": "forge fmt",
+    "build:contracts": "forge build",
+    "test:contracts": "forge test -vv",
+    "coverage": "forge coverage --report summary",
+    "lint:contracts": "solhint 'src/**/*.sol'",
+    "scan": "slither . --config-file slither.config.json",
+    "test:frontend": "npm run test --workspace frontend",
+    "test:backend": "npm run test --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "build": "npm run build --workspace frontend && npm run build --workspace backend"
+  },
+  "devDependencies": {
+    "solhint": "6.2.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
