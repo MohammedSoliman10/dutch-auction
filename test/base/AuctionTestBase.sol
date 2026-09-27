@@ -44,15 +44,6 @@ abstract contract AuctionTestBase is Test {
     // Helpers
     // ────────────────────────────────────────────────────────────────────
 
-    /// @notice Mint `count` tokens to `who` (ids are sequential from 0).
-    function mintTo(address who, uint256 count) internal {
-        vm.startPrank(who);
-        for (uint256 i = 0; i < count; i++) {
-            nft.mintNFT(DEFAULT_URI);
-        }
-        vm.stopPrank();
-    }
-
     /// @notice Mint one token to the seller (next sequential id).
     function mintToSeller() internal returns (uint256 tokenId) {
         vm.startPrank(seller);

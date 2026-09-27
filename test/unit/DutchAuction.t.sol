@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.31;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
 import {AuctionTestBase} from "../base/AuctionTestBase.sol";
 import {IDutchAuction} from "../../src/interfaces/IDutchAuction.sol";
+import {AuctionFactory} from "../../src/AuctionFactory.sol";
 import {DutchAuction} from "../../src/DutchAuction.sol";
+import {DutchAuctionNFT} from "../../src/DutchAuctionNFT.sol";
 
 /// @title DutchAuctionTest
 /// @notice RED suite for `DutchAuction`: price decay + clamping (FR-005), buy
@@ -330,5 +335,130 @@ contract DutchAuctionTest is AuctionTestBase {
             DEFAULT_DISCOUNT_RATE,
             DEFAULT_DURATION
         );
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // T069 coverage additions: getters, direct construction, TransferFailed
+    // ────────────────────────────────────────────────────────────────────
+
+    function test_PublicState_AllGettersExposeTerms() public view {
+        assertEq(auction.seller(), seller);
+        assertEq(address(auction.nft()), address(nft));
+        assertEq(auction.nftId(), 0);
+        assertEq(auction.startingPrice(), DEFAULT_STARTING_PRICE);
+        assertEq(auction.discountRate(), DEFAULT_DISCOUNT_RATE);
+        assertEq(auction.duration(), DEFAULT_DURATION);
+        assertEq(auction.startAt(), block.timestamp);
+        assertEq(auction.expiresAt(), block.timestamp + DEFAULT_DURATION);
+        assertFalse(auction.sold());
+        assertFalse(auction.cancelled());
+        assertEq(auction.buyer(), address(0));
+        assertEq(auction.salePrice(), 0);
+    }
+
+    function test_Constructor_RevertsOnInvalidDuration() public {
+        vm.expectRevert(IDutchAuction.InvalidDuration.selector);
+        new DutchAuction(
+            payable(seller),
+            IERC721(address(nft)),
+            0,
+            DEFAULT_STARTING_PRICE,
+            DEFAULT_DISCOUNT_RATE,
+            59
+        );
+    }
+
+    function test_Constructor_RevertsWhenPriceWouldGoNegative() public {
+        vm.expectRevert(IDutchAuction.PriceWouldGoNegative.selector);
+        new DutchAuction(
+            payable(seller),
+            IERC721(address(nft)),
+            0,
+            DEFAULT_DISCOUNT_RATE * DEFAULT_DURATION - 1,
+            DEFAULT_DISCOUNT_RATE,
+            DEFAULT_DURATION
+        );
+    }
+
+    function test_Constructor_RevertsWhenProductOverflows() public {
+        vm.expectRevert(IDutchAuction.PriceWouldGoNegative.selector);
+        new DutchAuction(
+            payable(seller), IERC721(address(nft)), 0, type(uint256).max, type(uint256).max, 60
+        );
+    }
+
+    function test_Cancel_AfterReclaim_RevertsNotLive() public {
+        vm.warp(auction.expiresAt());
+        vm.prank(seller);
+        auction.reclaim();
+
+        vm.expectRevert(IDutchAuction.NotLive.selector);
+        vm.prank(seller);
+        auction.cancel();
+    }
+
+    function test_Buy_RevertsTransferFailed_WhenSellerRejectsPayment() public {
+        RejectingSeller rejector = new RejectingSeller(nft, factory);
+        address rejectorAuction = rejector.mintAndAuction();
+        vm.warp(block.timestamp + 100);
+        uint256 price = asAuction(rejectorAuction).getPrice();
+
+        vm.expectRevert(IDutchAuction.TransferFailed.selector);
+        vm.prank(buyer);
+        asAuction(rejectorAuction).buy{value: price}();
+
+        // SC-004: failed settlement leaves no partial state.
+        assertFalse(asAuction(rejectorAuction).sold(), "state unchanged after failed settlement");
+        assertEq(nft.ownerOf(asAuction(rejectorAuction).nftId()), rejectorAuction);
+    }
+
+    function test_Buy_RevertsTransferFailed_WhenBuyerRefundRejected() public {
+        NonRefundableBuyer buyerContract = new NonRefundableBuyer();
+        vm.warp(block.timestamp + 100);
+        uint256 price = auction.getPrice();
+
+        vm.expectRevert(IDutchAuction.TransferFailed.selector);
+        buyerContract.attemptBuy{value: price + 0.1 ether}(auction);
+
+        assertFalse(auction.sold(), "state unchanged after failed settlement");
+        assertEq(nft.ownerOf(auction.nftId()), auctionAddr);
+    }
+}
+
+/// @notice Seller that rejects ETH payouts (no receive/fallback) — exercises
+///         the `TransferFailed` branch for the proceeds transfer.
+contract RejectingSeller is IERC721Receiver {
+    DutchAuctionNFT public immutable collection;
+    AuctionFactory public immutable auctionFactory;
+
+    constructor(DutchAuctionNFT collection_, AuctionFactory auctionFactory_) {
+        collection = collection_;
+        auctionFactory = auctionFactory_;
+    }
+
+    /// @notice Mints to this contract, approves the factory, and lists.
+    function mintAndAuction() external returns (address) {
+        uint256 tokenId = collection.mintNFT("ipfs://QmRejector");
+        collection.approve(address(auctionFactory), tokenId);
+        return auctionFactory.createAuction(address(collection), tokenId, 1 ether, 1e15, 300);
+    }
+
+    /// @notice Accepts the escrow transfer (callback path), but this contract
+    ///         has no receive() — paying proceeds to it fails.
+    function onERC721Received(address, address, uint256, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
+        return IERC721Receiver.onERC721Received.selector;
+    }
+}
+
+/// @notice Buyer that rejects refunds (no receive/fallback) — exercises the
+///         `TransferFailed` branch for the overpay refund.
+contract NonRefundableBuyer {
+    /// @notice Attempts `buy` forwarding the full msg.value; refund failure bubbles.
+    function attemptBuy(IDutchAuction auction) external payable {
+        auction.buy{value: msg.value}();
     }
 }

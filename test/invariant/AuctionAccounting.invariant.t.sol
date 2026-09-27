@@ -41,6 +41,9 @@ contract AuctionHandler is Test {
     function createAuction(uint256 seed) external {
         uint256 rate = 1e15; // 0.001 ETH/s
         uint256 duration = bound(seed % 1_000, 60, 10_000);
+        if (seed % 5 == 0) {
+            duration = 59; // deliberately invalid: exercises the catch path
+        }
         uint256 starting = rate * duration + (seed % 1 ether);
 
         vm.startPrank(seller);
@@ -58,14 +61,8 @@ contract AuctionHandler is Test {
 
     /// @notice Attempt a buy at current price + seed-derived overpay.
     function buy(uint256 idx, uint256 seed) external {
-        if (auctions.length == 0) {
-            return;
-        }
         address auctionAddr = auctions[idx % auctions.length];
         DutchAuction auction = DutchAuction(auctionAddr);
-        if (auction.sold() || auction.cancelled()) {
-            return;
-        }
 
         uint256 price = auction.getPrice();
         uint256 extra = seed % 1 ether;
@@ -87,22 +84,14 @@ contract AuctionHandler is Test {
 
     /// @notice Seller attempts to cancel (succeeds only while LIVE).
     function cancel(uint256 idx) external {
-        if (auctions.length == 0) {
-            return;
-        }
         address auctionAddr = auctions[idx % auctions.length];
-        if (DutchAuction(auctionAddr).sold()) {
-            return;
-        }
+
         vm.prank(seller);
         try DutchAuction(auctionAddr).cancel() {} catch {}
     }
 
     /// @notice Seller attempts to reclaim (succeeds only post-expiry, unsold).
     function reclaim(uint256 idx) external {
-        if (auctions.length == 0) {
-            return;
-        }
         address auctionAddr = auctions[idx % auctions.length];
         vm.prank(seller);
         try DutchAuction(auctionAddr).reclaim() {} catch {}
@@ -119,6 +108,17 @@ contract AuctionAccountingInvariant is Test {
 
     function setUp() public {
         handler = new AuctionHandler();
+
+        // Deterministic seed states for coverage: #1 sold, #2 cancelled,
+        // #3 left live, plus catch paths (pre-expiry reclaim, invalid create).
+        handler.createAuction(1);
+        handler.buy(0, 7); // sells auction #1
+        handler.createAuction(2);
+        handler.cancel(1); // cancels auction #2
+        handler.createAuction(3); // stays live for fuzz exploration
+        handler.reclaim(2); // pre-expiry → revert → catch path
+        handler.createAuction(5); // duration 59 → revert → catch path
+
         targetContract(address(handler));
     }
 

@@ -244,4 +244,35 @@ contract AuctionFactoryTest is AuctionTestBase {
         assertTrue(found, "AuctionCreated event missing");
         return (auctionAddr, 0, 0);
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // T069 coverage additions: constants, alternate approval, overflow guard
+    // ────────────────────────────────────────────────────────────────────
+
+    function test_Constants_ExposeDurationBounds() public view {
+        assertEq(factory.MIN_DURATION(), 60);
+        assertEq(factory.MAX_DURATION(), 2_592_000);
+    }
+
+    function test_Create_SucceedsWithSetApprovalForAll() public {
+        uint256 tokenId = mintToSeller();
+        vm.prank(seller);
+        nft.setApprovalForAll(address(factory), true);
+
+        vm.prank(seller);
+        address auctionAddr = factory.createAuction(
+            address(nft), tokenId, DEFAULT_STARTING_PRICE, DEFAULT_DISCOUNT_RATE, DEFAULT_DURATION
+        );
+        assertEq(nft.ownerOf(tokenId), auctionAddr);
+        assertEq(asAuction(auctionAddr).seller(), seller);
+    }
+
+    function test_Create_RevertsWhenRateDurationProductOverflows() public {
+        uint256 tokenId = mintToSeller();
+        approveFactory(seller, tokenId);
+
+        vm.expectRevert(IAuctionFactory.PriceWouldGoNegative.selector);
+        vm.prank(seller);
+        factory.createAuction(address(nft), tokenId, type(uint256).max, type(uint256).max, 60);
+    }
 }
