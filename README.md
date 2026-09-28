@@ -8,6 +8,10 @@ atomic on-chain transaction (payment + NFT transfer + refund of any overpay).
 Built spec-first with [GitHub Spec Kit](https://github.com/github/spec-kit):
 requirements → constitution → plan → tasks → TDD implementation.
 
+**Live app (production): <https://dutch-auction-mu.vercel.app>** — deep links
+like `/auction/0x…` work directly; connect a Sepolia wallet to mint, list,
+or buy.
+
 ## Deployed contracts (Sepolia, chainId `11155111`)
 
 | Contract | Address |
@@ -24,7 +28,7 @@ contracts are deployed by the factory at `createAuction` time.
 ```
 dutch-auction/
 ├── src/                 Solidity (solc 0.8.31, OpenZeppelin pinned in foundry.toml)
-│   ├── DutchAuctionNFT.sol   ERC-721 + mintToken(uri), factory-scoped minter
+│   ├── DutchAuctionNFT.sol   ERC-721, open mintNFT(string) — sequential ids, EmptyURI() guard
 │   ├── AuctionFactory.sol    createAuction → deploys per-auction escrow
 │   └── DutchAuction.sol      price decay, atomic buy/refund, CEI + ReentrancyGuard
 ├── test/                forge: unit + fuzz + invariant suites (64 tests)
@@ -87,6 +91,7 @@ gallery — it works even without the backend running.
 | --- | --- |
 | `RPC_URL` | Sepolia JSON-RPC endpoint (Alchemy/Infura/public) |
 | `DEPLOYER_KEY` | **Testnet-only** key for `forge script` + `seed-demo.sh` |
+| `BUYER_KEY` | Optional second **testnet** key for exercising buy flows from the CLI |
 | `FACTORY_ADDRESS` / `NFT_ADDRESS` | Mirror of `deployments/sepolia.json` |
 | `PORT` | Backend port (default `3001`) |
 | `DB_PATH` | SQLite file path (fallback name: `DATABASE_PATH`) |

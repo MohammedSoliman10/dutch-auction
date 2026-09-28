@@ -47,7 +47,7 @@ export interface AuctionViewItem {
   nftImage: string | null;
 }
 
-export const GALLERY_LIST_FAILED: PlainMessage = {
+const GALLERY_LIST_FAILED: PlainMessage = {
   what: "The auction list could not be loaded",
   next: "The auction index and the chain both failed to respond - check your connection, then retry",
 };

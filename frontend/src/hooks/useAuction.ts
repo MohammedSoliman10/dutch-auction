@@ -17,7 +17,7 @@ import {
 } from "./useAuctions";
 import type { AuctionSource, AuctionViewItem } from "./useAuctions";
 
-export const AUCTION_DETAIL_FAILED: PlainMessage = {
+const AUCTION_DETAIL_FAILED: PlainMessage = {
   what: "This auction could not be loaded",
   next: "The auction index and the chain both failed to respond - check your connection, then retry",
 };
