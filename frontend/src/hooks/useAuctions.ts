@@ -1,8 +1,9 @@
 // T061: gallery list query for US3. The index API (`GET /api/auctions`) is the
 // primary source; when it is unreachable - or, in production, does not exist at
 // all - the hook falls back to direct on-chain discovery through the factory
-// registry (FR-020). The caller always learns which source is being served so
-// degraded data can be labeled and retried, never presented as current.
+// registry (FR-020). The caller always learns which source answered so it can
+// pick the right data path (e.g. API-only cursor paging); the chain path is a
+// normal source serving live reads, not degraded data.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReadContract, useReadContracts } from "wagmi";

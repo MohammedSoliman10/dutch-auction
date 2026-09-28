@@ -28,7 +28,7 @@ function nowSeconds(): number {
 
 export interface UseAuctionResult {
   auction: AuctionViewItem | null;
-  /** Which source answered - `chain` means degraded, label it (FR-020). */
+  /** Which source answered - `chain` means direct on-chain reads (FR-020 fallback), a normal path. */
   source: AuctionSource | null;
   isLoading: boolean;
   /** Set only when BOTH the index and the chain failed (FR-020). */

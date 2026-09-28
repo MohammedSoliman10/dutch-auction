@@ -419,17 +419,6 @@ export default function MyAuctionsPage() {
             </p>
           ) : null}
 
-          {source === "chain" ? (
-            <p
-              role="status"
-              aria-live="polite"
-              className="mt-6 border border-ember bg-panel p-3 text-display"
-            >
-              The auction index is unreachable - your auctions are loaded directly
-              from the chain.
-            </p>
-          ) : null}
-
           {source === "api" ? (
             visible.length === 0 ? (
               <EmptyState />

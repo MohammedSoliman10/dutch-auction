@@ -77,10 +77,11 @@ function EmptyState({ filter, onShowAll }: EmptyStateProps) {
 /**
  * Gallery (T062/T063, FR-014/FR-020, US3): browsable auction cards with a
  * status filter and cursor paging. The index API is primary; when it is
- * unreachable the page serves factory-discovered auctions in a clearly
- * labeled degraded view with a retry (FR-020), and every empty state names
- * why it is empty and what to do next. A live auction is one click away from
- * this page - no address pasting (SC-009).
+ * unreachable the page serves factory-discovered auctions straight from the
+ * chain (FR-020) - that path is a normal, fully supported data source, so it
+ * is not bannered as an error - and every empty state names why it is empty
+ * and what to do next. A live auction is one click away from this page - no
+ * address pasting (SC-009).
  */
 export default function GalleryPage() {
   const [filter, setFilter] = useState<AuctionStatusFilter>("all");
@@ -90,15 +91,11 @@ export default function GalleryPage() {
   const announcement =
     error !== null
       ? `${error.what}. ${error.next}`
-      : source === "chain" && isLoading
-        ? "The auction index is unreachable. Loading auctions directly from the chain."
-        : isLoading
-          ? "Loading auctions..."
-          : source === "chain"
-            ? "The auction index is unreachable. Showing auctions loaded directly from the chain - values may be delayed."
-            : `Showing ${items.length} auction${items.length === 1 ? "" : "s"}${
-                filter === "all" ? "" : ` - filter: ${filter}`
-              }`;
+      : isLoading
+        ? "Loading auctions..."
+        : `Showing ${items.length} auction${items.length === 1 ? "" : "s"}${
+            filter === "all" ? "" : ` - filter: ${filter}`
+          }`;
 
   return (
     <main data-testid="GalleryPage" className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -148,20 +145,6 @@ export default function GalleryPage() {
           <p className="text-display">{error.what}</p>
           <p className="mt-2 text-muted">{error.next}</p>
           <Button className="mt-4" onClick={refetch}>
-            Retry
-          </Button>
-        </div>
-      ) : source === "chain" ? (
-        <div
-          data-testid="degraded-banner"
-          className="mt-6 border border-hairline bg-panel p-4"
-        >
-          <p className="text-display">The auction index is unreachable.</p>
-          <p className="mt-1 text-sm text-muted">
-            Showing auctions discovered directly from the chain - values may be
-            delayed.
-          </p>
-          <Button className="mt-3" onClick={refetch}>
             Retry
           </Button>
         </div>

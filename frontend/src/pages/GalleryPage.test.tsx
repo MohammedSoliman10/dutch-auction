@@ -373,7 +373,7 @@ describe("GalleryPage (T062, T063 - FR-014, SC-009)", () => {
     ).toBeInTheDocument();
   });
 
-  it("serves a labeled on-chain degraded view with retry when the index is unavailable (FR-020, US3.4)", async () => {
+  it("serves on-chain discovered auctions with no warning banner when the index is unavailable (FR-020 fallback)", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
     h.reads.auctionCount = 1n;
     h.argsReads["allAuctions:0"] = A1;
@@ -382,26 +382,20 @@ describe("GalleryPage (T062, T063 - FR-014, SC-009)", () => {
     renderGallery();
     await flushAsync();
 
-    const banner = screen.getByTestId("degraded-banner");
-    expect(banner).toHaveTextContent(/auction index is unreachable/i);
-    expect(banner).toHaveTextContent(/directly from the chain/i);
-    expect(banner).toHaveTextContent(/delayed/i);
-
-    // FR-018: the degraded state is announced programmatically.
-    const status = screen.getByRole("status");
-    expect(status).toHaveAttribute("aria-live", "polite");
-    expect(status).toHaveTextContent(/directly from the chain/i);
-
-    // On-chain discovered auctions still render, never as stale API data.
+    // FR-020 fallback still applies: the gallery never depends on the index.
     expect(screen.getAllByTestId("auction-card")).toHaveLength(1);
 
-    // FR-020: a retry action re-attempts the index.
-    const before = apiCalls().length;
-    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
-      within(banner).getByRole("button", { name: /retry/i }),
-    );
-    await flushAsync();
-    expect(apiCalls().length).toBe(before + 1);
+    // Chain discovery is the normal production data path, not a degraded
+    // state - no "unreachable"/"delayed" warning is shown. Chain reads here
+    // are live, so "values may be delayed" would be inaccurate copy.
+    expect(screen.queryByTestId("degraded-banner")).toBeNull();
+    expect(screen.queryByText(/auction index is unreachable/i)).toBeNull();
+    expect(screen.queryByText(/values may be delayed/i)).toBeNull();
+
+    // FR-018: the result is announced programmatically.
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/showing 1 auction/i);
   });
 
   it("shows a degraded error view with retry when both the index and the chain fail (FR-020)", async () => {

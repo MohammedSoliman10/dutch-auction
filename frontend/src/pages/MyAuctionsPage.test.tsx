@@ -225,9 +225,8 @@ describe("MyAuctionsPage (T053, FR-014)", () => {
     renderMyAuctions();
     await flushAsync();
 
-    expect(
-      screen.getByText(/directly from the chain/i),
-    ).toBeInTheDocument();
+    // No warning banner: chain discovery is the normal data path here.
+    expect(screen.queryByText(/directly from the chain/i)).toBeNull();
 
     const rows = screen.getAllByTestId("my-auction");
     expect(rows).toHaveLength(1); // seller filter drops A2 (owner OTHER)
