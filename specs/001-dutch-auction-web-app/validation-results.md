@@ -70,4 +70,4 @@ Vercel/RPC well within the profiled-connection assumption, consistent with the s
 - **Note**: the gallery's on-chain battery tokens (#0–#11) intentionally carry unfetchable/odd metadata URIs,
   so "PREVIEW UNAVAILABLE / Unnamed NFT" on those cards is the specified graceful degradation (FR/R13), not a
   gateway failure; token #13's real IPFS metadata loads via the plum gateway (preview 400px, name + description).
-Real bug found by battery: scripts/seed-demo.sh `cast balance` missing `--rpc-url` (fixed in working tree).
+Real bug found by battery: scripts/seed-demo.sh `cast balance` missing `--rpc-url` (fixed in `scripts/seed-demo.sh`, committed in `d7ca4cb`).
