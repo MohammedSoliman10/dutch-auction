@@ -1,13 +1,26 @@
 // Safe handling of NFT metadata URIs (FR-019 clause 2, R13): only http/https/
-// ipfs schemes are ever fetched or linked, IPFS is rewritten to a public
-// gateway, and fetches are bounded in time and size.
+// ipfs schemes are ever fetched or linked, IPFS is rewritten through a
+// configurable gateway, and fetches are bounded in time and size.
 
-const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
+const DEFAULT_IPFS_GATEWAY = "https://ipfs.io/ipfs/";
 const DEFAULT_TIMEOUT_MS = 5_000;
 const DEFAULT_MAX_BYTES = 100_000;
 
 /**
- * Rewrites ipfs:// URIs through the public gateway, passes http(s) through,
+ * Gateway prefix for ipfs:// URIs: `VITE_IPFS_GATEWAY` when set at build time
+ * (a dedicated gateway such as Pinata's avoids public-gateway rate limits),
+ * otherwise the public ipfs.io gateway. The value is normalized to a path
+ * prefix ending in `/ipfs/` (a bare origin like `https://gw.example` works).
+ */
+function ipfsGatewayPrefix(): string {
+  const raw = (import.meta.env?.VITE_IPFS_GATEWAY as string | undefined)?.trim();
+  if (!raw) return DEFAULT_IPFS_GATEWAY;
+  const base = raw.endsWith("/") ? raw : `${raw}/`;
+  return base.endsWith("/ipfs/") ? base : `${base}ipfs/`;
+}
+
+/**
+ * Rewrites ipfs:// URIs through the configured gateway, passes http(s) through,
  * and rejects every other scheme (data:, javascript:, blob:, ...).
  * Returns null when the URI is not safe to use.
  */
@@ -16,7 +29,7 @@ export function resolveMediaUrl(uri: string | undefined | null): string | null {
   const trimmed = uri.trim();
   if (trimmed.startsWith("ipfs://")) {
     const path = trimmed.slice("ipfs://".length).replace(/^ipfs\//, "");
-    return path.length > 0 ? `${IPFS_GATEWAY}${path}` : null;
+    return path.length > 0 ? `${ipfsGatewayPrefix()}${path}` : null;
   }
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return null;

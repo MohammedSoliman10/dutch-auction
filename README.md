@@ -103,6 +103,7 @@ gallery — it works even without the backend running.
 | `VITE_FACTORY_ADDRESS` / `VITE_NFT_ADDRESS` | Deployed addresses |
 | `VITE_RPC_URL` | Optional browser RPC (defaults to a public Sepolia RPC) |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Optional WalletConnect Cloud id (injected wallets work without it) |
+| `VITE_IPFS_GATEWAY` | Optional IPFS gateway prefix for `ipfs://` images/metadata (e.g. your Pinata dedicated gateway `https://<name>.mypinata.cloud/ipfs/`); defaults to `ipfs.io` |
 
 `.env.example` / `frontend/.env.example` are committed; actual `.env*` files
 are ignored by git (audited in task T071).
