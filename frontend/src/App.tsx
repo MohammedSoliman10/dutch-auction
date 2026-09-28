@@ -18,7 +18,14 @@ const CreateAuctionPage = lazy(() => import("./pages/CreateAuctionPage"));
 const MyAuctionsPage = lazy(() => import("./pages/MyAuctionsPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
-const queryClient = new QueryClient();
+// T068 (FR-017 / SC-007 / SC-010): one consistent caching policy for chain
+// reads - a value stays fresh for a full 15 s window (the app's freshness
+// ceiling), so moving between routes reuses cached auction lists instead of
+// re-hitting the RPC, while each hook's own refetchInterval (15 s gallery,
+// 1 s price anchor) still drives live updates.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 15_000 } },
+});
 
 export default function App() {
   return (

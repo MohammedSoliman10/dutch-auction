@@ -26,6 +26,7 @@ const METADATA = {
 
 const h = vi.hoisted(() => ({
   reads: {} as Record<string, unknown>,
+  readError: false,
   readCalls: [] as Array<{
     functionName?: string;
     query?: { enabled?: boolean; refetchInterval?: number };
@@ -49,8 +50,11 @@ vi.mock("wagmi", () => ({
   }) => {
     h.readCalls.push(config);
     return {
+      // Stale-data model (react-query keeps the last value on a failed refetch):
+      // data survives, isError flips - the page must label it as delayed.
       data: h.reads[config.functionName ?? ""],
       isLoading: false,
+      isError: h.readError,
       refetch: vi.fn(),
     };
   },
@@ -123,6 +127,7 @@ beforeEach(() => {
   vi.setSystemTime(Number(START) * 1_000);
   vi.resetAllMocks();
   h.readCalls = [];
+  h.readError = false;
   h.balanceValue = undefined;
   h.chainIdFallback = SEPOLIA_ID;
   h.account = { address: BUYER, isConnected: true, chainId: SEPOLIA_ID };
@@ -387,5 +392,110 @@ describe("AuctionPage (T033)", () => {
 
     expect(h.writeContractAsync).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("status")).toHaveTextContent(/confirmed/i);
+  });
+});
+
+function auctionTree() {
+  return (
+    <MemoryRouter initialEntries={[`/auction/${AUCTION}`]}>
+      <Routes>
+        <Route path="/auction/:address" element={<AuctionPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+describe("AuctionPage (T066/T067 polish sweeps)", () => {
+  it("labels a failed chain read instead of loading forever, with retry (FR-020)", async () => {
+    h.reads = {}; // no cached values at all
+    h.readError = true;
+    renderAuctionPage();
+    await flushAsync();
+
+    expect(screen.queryByText("Loading auction...")).not.toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/could not be loaded/i);
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    // FR-020: no purchase is enabled on values that could not be read.
+    expect(screen.queryByRole("button", { name: /buy now/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps loaded values on screen but labels them possibly delayed when a later read fails (FR-020)", async () => {
+    // Fresh element per rerender: React bails out of re-rendering when given
+    // the identical element reference, which would hide the later read failure.
+    const view = render(auctionTree());
+    await flushAsync();
+    expect(screen.getByTestId("seller")).toHaveTextContent(SELLER);
+
+    h.readError = true; // a later refetch fails: cached values stay, freshness is gone
+    view.rerender(auctionTree());
+    await flushAsync();
+
+    expect(screen.getByTestId("seller")).toHaveTextContent(SELLER);
+    expect(screen.getByTestId("current-price")).toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/possibly delayed/i);
+    expect(within(alert).getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(within(alert).getByRole("button", { name: /retry/i })).toBeEnabled();
+  });
+
+  it("refetches auction fields inside the 15 s window so status never goes stale (SC-007)", () => {
+    renderAuctionPage();
+
+    const core = [
+      "seller",
+      "startingPrice",
+      "discountRate",
+      "duration",
+      "startAt",
+      "expiresAt",
+      "sold",
+      "cancelled",
+      "buyer",
+      "salePrice",
+      "nft",
+      "nftId",
+    ];
+    const calls = h.readCalls.filter(
+      (call) => call.functionName !== undefined && core.includes(call.functionName),
+    );
+    expect(calls.length).toBeGreaterThanOrEqual(core.length);
+    for (const call of calls) {
+      expect(call.query?.refetchInterval, call.functionName).toBe(15_000);
+    }
+  });
+
+  it("treats a reverted purchase receipt as a failure with retry, never a false success (SC-004, FR-003)", async () => {
+    h.writeContractAsync.mockResolvedValue(TX_HASH);
+    h.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderAuctionPage();
+
+    await user.click(screen.getByRole("button", { name: /buy now/i }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: /confirm/i }),
+    );
+    await flushAsync();
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/declined/i);
+    expect(status).not.toHaveTextContent(/confirmed/i);
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("announces auction status transitions through a polite live region (FR-018)", async () => {
+    renderAuctionPage();
+    await flushAsync();
+
+    const region = screen.getByTestId("status-announcement");
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region).toHaveTextContent("");
+
+    act(() => {
+      vi.advanceTimersByTime(300_000); // countdown reaches expiresAt
+    });
+    expect(screen.getByTestId("status")).toHaveTextContent("expired");
+    expect(region).toHaveTextContent(/changed from live to expired/i);
   });
 });

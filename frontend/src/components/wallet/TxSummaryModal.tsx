@@ -16,17 +16,45 @@ export interface TxSummaryModalProps {
  */
 export function TxSummaryModal({ summary, onConfirm, onCancel }: TxSummaryModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   const titleId = "tx-summary-title";
 
   useEffect(() => {
+    // FR-018: remember what opened the dialog, move focus in, and hand focus
+    // back on close (Escape or confirm) so keyboard users never fall to <body>.
+    previousFocus.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialogRef.current?.querySelector("button")?.focus();
+    return () => {
+      previousFocus.current?.focus();
+    };
   }, []);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/85 p-6"
       onKeyDown={(event) => {
-        if (event.key === "Escape") onCancel();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel();
+          return;
+        }
+        // FR-018: Tab cycles inside the dialog - focus never escapes to the
+        // page behind the overlay; Shift+Tab wraps backwards.
+        if (event.key === "Tab") {
+          const controls = dialogRef.current
+            ? Array.from(dialogRef.current.querySelectorAll("button"))
+            : [];
+          if (controls.length === 0) return;
+          event.preventDefault();
+          const currentIndex = controls.findIndex(
+            (control) => control === document.activeElement,
+          );
+          const start = currentIndex === -1 ? 0 : currentIndex;
+          const delta = event.shiftKey ? -1 : 1;
+          const next = (((start + delta) % controls.length) + controls.length) % controls.length;
+          controls[next]?.focus();
+        }
       }}
     >
       <div

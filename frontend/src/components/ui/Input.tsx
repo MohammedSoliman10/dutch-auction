@@ -13,7 +13,7 @@ export function Input({ label, error, id, className, ...inputProps }: InputProps
 
   const classes = [
     "border bg-ink px-3 py-2 font-body text-display placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember disabled:opacity-50",
-    error ? "border-ember" : "border-hairline",
+    error ? "border-ember" : "border-muted",
     className ?? "",
   ]
     .filter((segment) => segment.length > 0)

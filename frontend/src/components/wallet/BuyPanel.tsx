@@ -4,7 +4,7 @@ import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi
 
 import { SEPOLIA_CHAIN_ID } from "../../config/chains";
 import { dutchAuctionAbi } from "../../config/contracts";
-import { ERROR_MESSAGES } from "../../lib/errors";
+import { assertTxConfirmed, ERROR_MESSAGES } from "../../lib/errors";
 import { formatEth, formatEthWithUnit } from "../../lib/format";
 import type { AuctionStatus } from "../../lib/price";
 import { useTxFlow } from "../../hooks/useTxFlow";
@@ -113,11 +113,16 @@ export function BuyPanel({ auctionAddress, price, status, onSuccess }: BuyPanelP
         });
         return {
           hash,
-          wait: () => {
+          wait: async () => {
             if (!publicClient) {
               return Promise.reject(new Error("Network client unavailable"));
             }
-            return publicClient.waitForTransactionReceipt({ hash });
+            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+            // SC-004/FR-003: waitForTransactionReceipt resolves on a reverted
+            // receipt too - a failed purchase must surface as a mapped
+            // failure with retry, never as a silent "confirmed".
+            assertTxConfirmed(receipt);
+            return receipt;
           },
         };
       },

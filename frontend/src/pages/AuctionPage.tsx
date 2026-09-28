@@ -5,16 +5,19 @@ import { useReadContract } from "wagmi";
 
 import { Countdown } from "../components/auction/Countdown";
 import { PriceTicker } from "../components/auction/PriceTicker";
+import { StatusAnnouncement } from "../components/auction/StatusAnnouncement";
 import { StatusBadge } from "../components/auction/StatusBadge";
 import { BuyPanel } from "../components/wallet/BuyPanel";
 import { NetworkGuard } from "../components/wallet/NetworkGuard";
 import { dutchAuctionAbi, dutchAuctionNftAbi } from "../config/contracts";
 import { useCurrentPrice } from "../hooks/useCurrentPrice";
 import { useMetadata } from "../hooks/useMetadata";
+import { AUCTION_READ_FAILED, AUCTION_VALUES_DELAYED } from "../lib/errors";
 import { formatEthWithUnit, formatRate } from "../lib/format";
 import { resolveMediaUrl } from "../lib/ipfs";
 import { deriveStatus } from "../lib/price";
 import type { AuctionParams } from "../lib/price";
+import { Button } from "../components/ui/Button";
 
 export default function AuctionPage() {
   const { address } = useParams<{ address: string }>();
@@ -25,73 +28,73 @@ export default function AuctionPage() {
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "seller",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const startingPrice = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "startingPrice",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const discountRate = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "discountRate",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const duration = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "duration",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const startAt = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "startAt",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const expiresAt = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "expiresAt",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const sold = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "sold",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const cancelled = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "cancelled",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const buyer = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "buyer",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const salePrice = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "salePrice",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const nft = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "nft",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const nftId = useReadContract({
     address: auctionAddress,
     abi: dutchAuctionAbi,
     functionName: "nftId",
-    query: { enabled: auctionAddress !== undefined },
+    query: { enabled: auctionAddress !== undefined, refetchInterval: 15_000 },
   });
   const tokenUri = useReadContract({
     address: nft.data,
@@ -141,6 +144,31 @@ export default function AuctionPage() {
     void outcomeReads.current.salePrice.refetch();
   }, []);
 
+  // FR-020 / SC-007: the core fields refresh every 15 s, and any failed read
+  // is labelled - total failure blocks the view, a failed refetch marks the
+  // still-rendered values as possibly delayed. Never a spinner forever, never
+  // stale-as-current.
+  const coreReads = [
+    seller,
+    startingPrice,
+    discountRate,
+    duration,
+    startAt,
+    expiresAt,
+    sold,
+    cancelled,
+    buyer,
+    salePrice,
+    nft,
+    nftId,
+  ];
+  const anyReadError = coreReads.some((read) => read.isError);
+  const retryReads = () => {
+    for (const read of coreReads) {
+      void read.refetch();
+    }
+  };
+
   if (auctionAddress === undefined) {
     return (
       <main data-testid="AuctionPage" className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -159,6 +187,22 @@ export default function AuctionPage() {
     sold.data === undefined ||
     cancelled.data === undefined
   ) {
+    if (anyReadError) {
+      return (
+        <main data-testid="AuctionPage" className="mx-auto w-full max-w-6xl px-6 py-12">
+          <h1 className="text-display-lg">Auction</h1>
+          <div role="alert" className="mt-8 border border-ember bg-panel p-4">
+            <p className="font-display text-sm uppercase tracking-wide text-display">
+              {AUCTION_READ_FAILED.what}
+            </p>
+            <p className="mt-2 text-muted">{AUCTION_READ_FAILED.next}</p>
+            <Button className="mt-4" onClick={retryReads}>
+              Retry
+            </Button>
+          </div>
+        </main>
+      );
+    }
     return (
       <main data-testid="AuctionPage" className="mx-auto w-full max-w-6xl px-6 py-12">
         <h1 className="text-display-lg">Auction</h1>
@@ -179,6 +223,19 @@ export default function AuctionPage() {
   return (
     <main data-testid="AuctionPage" className="mx-auto w-full max-w-6xl px-6 py-12">
       <h1 className="text-display-lg">Auction</h1>
+      <StatusAnnouncement status={status} />
+
+      {anyReadError ? (
+        <div role="alert" className="mt-6 border border-ember bg-panel p-4">
+          <p className="font-display text-sm uppercase tracking-wide text-display">
+            {AUCTION_VALUES_DELAYED.what}
+          </p>
+          <p className="mt-2 text-muted">{AUCTION_VALUES_DELAYED.next}</p>
+          <Button className="mt-4" onClick={retryReads}>
+            Retry
+          </Button>
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section aria-label="NFT preview" className="border border-hairline bg-panel p-4">

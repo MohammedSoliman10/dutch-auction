@@ -110,6 +110,18 @@ export const ERROR_MESSAGES = {
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
 
+// FR-020: chain-reading views label read failures instead of presenting
+// cached values as current. The auction detail view uses these two.
+export const AUCTION_READ_FAILED: PlainMessage = {
+  what: "This auction could not be loaded from the chain",
+  next: "The network did not respond - check your connection, then retry",
+};
+
+export const AUCTION_VALUES_DELAYED: PlainMessage = {
+  what: "Some auction values are possibly delayed",
+  next: "The latest chain read failed, so the values above were loaded earlier and may be out of date. The contract still re-checks the price before any purchase - retry to refresh them",
+};
+
 const CONTRACT_ERROR_NAMES = [
   "AlreadySold",
   "AlreadyCancelled",
@@ -271,7 +283,10 @@ export function mapTxError(err: unknown): AppError {
           "TransactionNotFoundError",
           "TransactionReceiptNotFoundError",
           "WaitForTransactionReceiptTimeoutError",
-        ) || messageMatches(node, /failed to fetch|network (request|error)|timed out/i),
+        ) || messageMatches(
+          node,
+          /failed to fetch|network (request|error)|timed out|network client unavailable/i,
+        ),
     )
   ) {
     return toAppError("RPC_ERROR");
