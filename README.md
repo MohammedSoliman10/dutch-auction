@@ -1,5 +1,7 @@
 # Dutch Auction — on-chain NFT auction dApp (Sepolia)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-ff5a1f.svg)](LICENSE)
+
 A publicly hosted Dutch-auction platform for NFTs. Sellers mint an ERC-721 and
 list it in a descending-price auction; buyers watch the price tick down every
 second and can purchase at any instant before expiry. Settlement is a single
@@ -11,6 +13,11 @@ requirements → constitution → plan → tasks → TDD implementation.
 **Live app (production): <https://dutch-auction-mu.vercel.app>** — deep links
 like `/auction/0x…` work directly; connect a Sepolia wallet to mint, list,
 or buy.
+
+![Ember Descent — an NFT minted and auctioned with this dApp](docs/ember-descent.png)
+
+*Auction artwork: **Ember Descent** (token #13) — minted, escrowed and auctioned
+through the dApp; image and metadata pinned to IPFS via Pinata.*
 
 ## Deployed contracts (Sepolia, chainId `11155111`)
 
@@ -229,3 +236,7 @@ TDD is enforced (red → green, constitution §Workflow):
   by git and must stay that way.
 - No write endpoints exist on the API — every state change is a wallet-signed
   transaction on-chain.
+
+## License
+
+Released under the [MIT License](LICENSE).
