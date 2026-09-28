@@ -62,8 +62,11 @@ Vercel/RPC well within the profiled-connection assumption, consistent with the s
   `localStorage.MOCK_MODE` (`wrongnet` | `reject` | `sepolia`); signer bundle (ethers v6, Sepolia buyer key)
   injected as a second init script. RainbowKit lists it as "MetaMask"; connect/switch/reject/submit all go
   through the normal wagmi path. Every wallet call was recorded in-page (`__CALLS`) for assertions.
-- **Evidence**: tool screenshots (`/tmp/opencode-browser-*`), accessibility snapshots, in-page DOM audits,
-  `__CALLS` logs, and on-chain `cast`/RPC checks (receipt `0xf629c29a…` status=1, `sold=true`, balances).
+- **Evidence**: screenshots committed at `evidence/browser/` (`s12-gallery-filters`, `s13-wrong-network`,
+  `s14-rejected`, `s15-placeholder-auction`, `s16-mint`/`create`/`my-auctions`/`404`, `s17-purchase-confirmed`),
+  accessibility snapshots, in-page DOM audits, `__CALLS` logs, and on-chain `cast`/RPC checks
+  (receipt `0xf629c29a…` status=1, `sold=true`, balances). Harness torn down after the run: mock-wallet/signer
+  init scripts dropped and the origin's test localStorage cleared, so the pane now loads the app as a fresh visitor.
 - **Note**: the gallery's on-chain battery tokens (#0–#11) intentionally carry unfetchable/odd metadata URIs,
   so "PREVIEW UNAVAILABLE / Unnamed NFT" on those cards is the specified graceful degradation (FR/R13), not a
   gateway failure; token #13's real IPFS metadata loads via the plum gateway (preview 400px, name + description).
