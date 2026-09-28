@@ -118,7 +118,8 @@ rpc_chain=$(cast chain-id --rpc-url "$RPC_URL") || die "cannot reach RPC_URL"
   die "RPC_URL serves chain $rpc_chain but deployments/sepolia.json targets $deployed_chain"
 
 deployer=$(cast wallet address --private-key "$DEPLOYER_KEY")
-balance_wei=$(cast balance "$deployer") || die "cannot read the deployer balance"
+balance_wei=$(cast balance "$deployer" --rpc-url "$RPC_URL") ||
+  die "cannot read the deployer balance"
 [ "$balance_wei" != "0" ] ||
   die "deployer $deployer holds no Sepolia ETH - fund it from a faucet first"
 
